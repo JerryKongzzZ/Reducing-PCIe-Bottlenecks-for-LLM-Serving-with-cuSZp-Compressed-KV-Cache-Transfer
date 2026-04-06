@@ -51,7 +51,9 @@ RUN mkdir -p build && cd build && \
 # 编译cuSZp包装器
 WORKDIR /workspace/integration/cuszp_wrapper
 RUN mkdir -p build && cd build && \
-    cmake .. -Dpybind11_DIR=$(python3 -m pybind11 --cmakedir) && \
+    cmake .. \
+      -Dpybind11_DIR=$(python3 -m pybind11 --cmakedir) \
+      -DCMAKE_PREFIX_PATH=$(python3 -c "import torch; print(torch.utils.cmake_prefix_path)") && \
     make -j$(nproc)
 
 # 返回工作目录
