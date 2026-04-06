@@ -53,7 +53,8 @@ WORKDIR /workspace/integration/cuszp_wrapper
 RUN mkdir -p build && cd build && \
     cmake .. \
       -Dpybind11_DIR=$(python3 -m pybind11 --cmakedir) \
-      -DCMAKE_PREFIX_PATH=$(python3 -c "import torch; print(torch.utils.cmake_prefix_path)") && \
+      -DCMAKE_PREFIX_PATH=$(python3 -c "import torch; print(torch.utils.cmake_prefix_path)") \
+      -DCMAKE_CXX_FLAGS="$(python3 -c 'import torch.utils.cpp_extension as E; print(" ".join("-I"+p for p in E.include_paths()))')" && \
     make -j$(nproc)
 
 # 返回工作目录
