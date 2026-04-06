@@ -51,7 +51,7 @@ RUN mkdir -p build && cd build && \
 # 编译cuSZp包装器
 WORKDIR /workspace/integration/cuszp_wrapper
 RUN mkdir -p build && cd build && \
-    cmake .. && \
+    cmake .. -Dpybind11_DIR=$(python3 -m pybind11 --cmakedir) && \
     make -j$(nproc)
 
 # 返回工作目录
