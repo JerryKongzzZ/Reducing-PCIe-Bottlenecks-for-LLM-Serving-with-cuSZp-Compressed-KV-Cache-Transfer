@@ -1,5 +1,5 @@
 #include <torch/extension.h>
-#include <c10/cuda/CUDAStream.h> // 获取 PyTorch 当前 CUDA 流
+#include <c10/cuda/CUDAStream.h>
 #include <pybind11/pybind11.h>
 #include "cuszp_wrapper.h"
 
@@ -8,13 +8,31 @@ namespace py = pybind11;
 PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
     m.doc() = "cuSZp wrapper for vLLM integration";
     
-    // CompressionConfig类
+    // 👉 第一步：先把所有的枚举类型定义在最前面！
+    py::enum_<cuszp_dim_t>(m, "CuszpDim")
+        .value("DIM_1D", CUSZP_DIM_1D)
+        .value("DIM_2D", CUSZP_DIM_2D)
+        .value("DIM_3D", CUSZP_DIM_3D)
+        .export_values();
+    
+    py::enum_<cuszp_mode_t>(m, "CuszpMode")
+        .value("MODE_FIXED", CUSZP_MODE_FIXED)
+        .value("MODE_PLAIN", CUSZP_MODE_PLAIN)
+        .value("MODE_OUTLIER", CUSZP_MODE_OUTLIER)
+        .export_values();
+    
+    py::enum_<cuszp_type_t>(m, "CuszpType")
+        .value("TYPE_FLOAT", CUSZP_TYPE_FLOAT)
+        .value("TYPE_DOUBLE", CUSZP_TYPE_DOUBLE)
+        .export_values();
+
+    // 👉 第二步：然后再定义 CompressionConfig 类
     py::class_<CuSZpWrapper::CompressionConfig>(m, "CompressionConfig")
         .def(py::init<>())
         .def(py::init<float, bool, cuszp_dim_t, cuszp_mode_t, cuszp_type_t>(),
              py::arg("error_bound") = 1e-4f,
              py::arg("use_relative_error") = true,
-             py::arg("processing_dim") = CUSZP_DIM_1D,
+             py::arg("processing_dim") = CUSZP_DIM_1D,  // 此时 PyBind11 已经认识它了！
              py::arg("encoding_mode") = CUSZP_MODE_PLAIN,
              py::arg("data_type") = CUSZP_TYPE_FLOAT)
         .def_readwrite("error_bound", &CuSZpWrapper::CompressionConfig::error_bound)
@@ -56,22 +74,5 @@ PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
                     &CuSZpWrapper::estimate_compressed_buffer_size)
         .def("get_config", &CuSZpWrapper::get_config)
         .def("update_config", &CuSZpWrapper::update_config);
-    
-    // 枚举类型
-    py::enum_<cuszp_dim_t>(m, "CuszpDim")
-        .value("DIM_1D", CUSZP_DIM_1D)
-        .value("DIM_2D", CUSZP_DIM_2D)
-        .value("DIM_3D", CUSZP_DIM_3D)
-        .export_values();
-    
-    py::enum_<cuszp_mode_t>(m, "CuszpMode")
-        .value("MODE_FIXED", CUSZP_MODE_FIXED)
-        .value("MODE_PLAIN", CUSZP_MODE_PLAIN)
-        .value("MODE_OUTLIER", CUSZP_MODE_OUTLIER)
-        .export_values();
-    
-    py::enum_<cuszp_type_t>(m, "CuszpType")
-        .value("TYPE_FLOAT", CUSZP_TYPE_FLOAT)
-        .value("TYPE_DOUBLE", CUSZP_TYPE_DOUBLE)
-        .export_values();
+
 }
