@@ -74,8 +74,8 @@ class CompressionBenchmark:
         config.error_bound = error_bound
         config.use_relative_error = True
         config.encoding_mode = self._parse_mode(encoding_mode)
-        config.processing_dim = 1  # 1D
-        config.data_type = 0  # float32
+        config.processing_dim = cuszp_wrapper_cpp.CuszpDim.DIM_1D
+        config.data_type = cuszp_wrapper_cpp.CuszpType.TYPE_FLOAT
         
         compressor = cuszp_wrapper_cpp.CuSZpWrapper(config, self.device_id)
         
@@ -184,14 +184,14 @@ class CompressionBenchmark:
         
         return results
     
-    def _parse_mode(self, mode: str) -> int:
+    def _parse_mode(self, mode: str):
         """解析编码模式"""
         mode_map = {
-            "fixed": 0,
-            "plain": 1,
-            "outlier": 2
+            "fixed": cuszp_wrapper_cpp.CuszpMode.MODE_FIXED,
+            "plain": cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN,
+            "outlier": cuszp_wrapper_cpp.CuszpMode.MODE_OUTLIER
         }
-        return mode_map.get(mode.lower(), 1)
+        return mode_map.get(mode.lower(), cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN)
     
     def benchmark_error_bound_sweep(
         self,
