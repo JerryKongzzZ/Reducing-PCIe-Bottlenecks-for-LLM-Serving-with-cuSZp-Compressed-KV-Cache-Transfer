@@ -116,12 +116,10 @@ class CompressedSwapManager:
             
             # 在压缩流上异步压缩
             with torch.cuda.stream(self.compression_stream):
-                compressed_size = ctypes.c_size_t(0)
-                success = self.compressor.compress(
+                # 💡 修改这里：使用元组解包接收返回值，只传2个参数
+                success, compressed_buffer, actual_size = self.compressor.compress(
                     _src_cache,
-                    compressed_buffer,
-                    compressed_size,
-                    self.compression_stream.cuda_stream
+                    compressed_buffer
                 )
                 
                 if not success:
@@ -131,10 +129,8 @@ class CompressedSwapManager:
                     )
                     return
                 
-                # 异步传输压缩数据到CPU
-                # 注意：这里需要调整dst_cache的大小来存储压缩数据
-                # 实际实现中，可能需要修改vLLM的内存管理来支持压缩数据
-                compressed_cpu = compressed_buffer[:compressed_size.value].cpu()
+                # 💡 修改这里：使用 actual_size 而不是 compressed_size.value
+                compressed_cpu = compressed_buffer[:actual_size].cpu()
                 
                 # 存储压缩数据（这里简化处理，实际需要修改vLLM的存储结构）
                 # TODO: 修改vLLM的CPU缓存结构以支持压缩数据
@@ -181,18 +177,14 @@ class CompressedSwapManager:
             
             # 在解压缩流上异步解压缩
             with torch.cuda.stream(self.decompression_stream):
-                # 分配输出缓冲区
                 _dst_cache = dst_cache[:, dst_block_indices]
+                original_size = compressed_cpu.numel()
                 
-                # 估算原始大小（需要从元数据中获取）
-                # TODO: 存储压缩元数据（原始大小、压缩大小等）
-                original_size = compressed_cpu.numel()  # 简化：假设已知
-                
+                # 💡 修改这里：去掉第四个 stream 参数
                 success = self.compressor.decompress(
                     compressed_gpu,
                     original_size,  # 压缩大小
-                    _dst_cache,
-                    self.decompression_stream.cuda_stream
+                    _dst_cache
                 )
                 
                 if not success:

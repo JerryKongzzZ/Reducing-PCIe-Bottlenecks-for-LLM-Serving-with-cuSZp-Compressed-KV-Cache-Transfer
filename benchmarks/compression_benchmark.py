@@ -85,12 +85,10 @@ class CompressionBenchmark:
         
         # 预热
         for _ in range(10):
-            compressed_size = ctypes.c_size_t(0)
-            compressor.compress(
+            # 💡 直接接收返回值，不需要 ctypes
+            _, compressed_buffer, _ = compressor.compress(
                 test_tensor,
-                compressed_buffer,
-                compressed_size,
-                None
+                compressed_buffer
             )
         torch.cuda.synchronize()
         
@@ -101,19 +99,19 @@ class CompressionBenchmark:
         for _ in range(num_iterations):
             torch.cuda.synchronize()
             start = time.perf_counter()
-            compressed_size = ctypes.c_size_t(0)
-            success = compressor.compress(
+            
+            # 💡 使用新 API
+            success, compressed_buffer, actual_size = compressor.compress(
                 test_tensor,
-                compressed_buffer,
-                compressed_size,
-                None
+                compressed_buffer
             )
+            
             torch.cuda.synchronize()
             end = time.perf_counter()
             
             if success:
                 compression_times.append(end - start)
-                compressed_sizes.append(compressed_size.value)
+                compressed_sizes.append(actual_size) # 💡 直接用 actual_size
         
         # 测量解压缩时间
         decompression_times = []
@@ -124,9 +122,8 @@ class CompressionBenchmark:
             decompressed_tensor = torch.empty_like(test_tensor)
             success = compressor.decompress(
                 compressed_buffer,
-                compressed_sizes[0],  # 使用第一次压缩的大小
-                decompressed_tensor,
-                None
+                compressed_sizes[0],
+                decompressed_tensor
             )
             torch.cuda.synchronize()
             end = time.perf_counter()
@@ -148,8 +145,7 @@ class CompressionBenchmark:
         compressor.decompress(
             compressed_buffer,
             compressed_sizes[0],
-            decompressed_tensor,
-            None
+            decompressed_tensor
         )
         
         abs_errors = torch.abs(test_tensor - decompressed_tensor)

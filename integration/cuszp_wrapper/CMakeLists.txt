@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(CUDA REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 find_package(pybind11 REQUIRED)
+# 👉 新增：查找 Torch 库
+find_package(Torch REQUIRED)
 
 # 查找cuSZp
 # 假设cuSZp安装在 ../cuSZp/install
@@ -55,11 +57,13 @@ target_link_libraries(cuszp_wrapper_cpp PRIVATE
     ${CUSZP_LIB}
     ${CUDA_LIBRARIES}
     ${CUDA_CUDART_LIBRARY}
+    ${TORCH_LIBRARIES}    # 👉 新增：必须链接 Torch 库
 )
 
 # 编译选项
 target_compile_options(cuszp_wrapper_cpp PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>
+    ${TORCH_CXX_FLAGS}    # 👉 新增：应用 Torch 推荐的编译 Flag
 )
 
 # 设置输出目录
