@@ -1,8 +1,8 @@
 # Compress-Transfer-Decompress for LLM Serving: cuSZp-Enabled CPU-GPU Data Pipeline in vLLM
 
 ## 🌟 Project Overview
-This project is part of the Final Year Project (FYP) 2026 at **The Hong Kong Polytechnic University**. 
-We integrate the **cuSZp** error-bounded lossy compression framework into the **vLLM** engine to optimize KV Cache swapping between CPU and GPU, specifically targeting performance gains on high-bandwidth hardware like the **RTX 5080**.
+This project is the Final Year Project (FYP) 2026 of the Department of Computing at **The Hong Kong Polytechnic University**. My name is **KONG Zirui** and my student ID is **22103493D**.
+I integrate the **cuSZp** error-bounded lossy compression framework into the **vLLM** engine to optimize KV Cache swapping between CPU and GPU, specifically targeting performance gains on high-bandwidth hardware like the **RTX 5080**.
 
 ---
 
