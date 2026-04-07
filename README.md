@@ -9,10 +9,19 @@ I integrate the **cuSZp** error-bounded lossy compression framework into the **v
 ## 📁 Project Structure
 ```text
 PolyU_COMP_Final_Year_Project_2026_Spring/
-├── benchmarks/               # Performance profiling scripts (Python)
+├── benchmarks/               # Performance profiling and experimental scripts (Python)
+│   ├── baseline_profiling.py         # PCIe 4.0/5.0 H2D/D2H profiling
+│   ├── compression_benchmark.py      # cuSZp compression ratio/error benchmark
+│   ├── data_summarize.py             # Script to aggregate 8-model experiment results into Markdown
+│   ├── generate_real_kv_cache.py     # Real KV cache extraction via HF Transformers
+│   ├── run_experiments.sh            # Run comprehensive benchmark across 8 models
+│   └── test_vllm_integration.py      # Mock CacheEngine monkey patch validation
+├── data/                     # Output directory for `.pt` tensor caches and `.json` benchmark results
 ├── docker/                   # Docker infrastructure (Dockerfile, run.sh)
 ├── final_report/             # Final FYP thesis (PDF)
 ├── integration/              # Core source code (C++/Python bindings)
+│   ├── compression_pipeline/         # Python hook for vLLM (compressed_swap.py)
+│   └── cuszp_wrapper/                # cuSZp PyBind11 C++ Wrapper
 ├── requirements.txt          # Python dependencies
 ├── test.sh                   # 🚀 Root Automation Script (Builds & Tests)
 └── README.md                 # This comprehensive guide
