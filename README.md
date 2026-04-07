@@ -1,59 +1,66 @@
 # Compress-Transfer-Decompress for LLM Serving: cuSZp-Enabled CPU-GPU Data Pipeline in vLLM
 
 ## 🌟 Project Overview
-
-This project is a Final Year Project (FYP) for the Spring 2026 semester at The Hong Kong Polytechnic University. 
-It aims to deeply integrate the ultra-fast GPU compression library **cuSZp** into the **vLLM** large language model inference framework. By introducing an innovative "compress-transfer-decompress" workflow, it optimizes CPU-GPU KV Cache data exchange (Swap In/Out), significantly reducing the negative impact of PCIe bandwidth bottlenecks on LLM throughput and latency.
+This project is part of the Final Year Project (FYP) 2026 at **The Hong Kong Polytechnic University**. 
+The goal is to integrate the **cuSZp** error-bounded lossy compression framework into **vLLM** to optimize KV Cache swapping between CPU and GPU. By compressing data before transferring it over the PCIe bus, we aim to overcome bandwidth bottlenecks and improve LLM serving throughput.
 
 ## 📁 Project Structure
-
 ```text
-FYP_Workspace/
-├── cuSZp/                    # Official cuSZp compression library (Git Submodule/Clone)
-├── integration/              # Core integration code
-│   ├── cuszp_wrapper/        # cuSZp C++ and PyBind11 wrappers
-│   └── compression_pipeline/ # Python-level compression pipeline logic
-├── benchmarks/               # Performance benchmarking scripts
-├── docker/                   # Docker configurations & usage guide (contains its own run.sh)
-├── run.sh                    # 🚀 Automated one-click build and test script (Root)
-└── README.md                 # Project overview documentation
+POLYU_COMP_FIN.../
+├── benchmarks/               # Performance profiling scripts
+├── docker/                   # Docker deployment (See docker/README.md)
+├── final_report/             # Final FYP thesis and documentation
+├── integration/              # Core source code (C++ Wrappers & Python Pipeline)
+├── interim_report/           # Mid-term progress reports
+├── project_proposal/         # Initial project scope and design
+├── .gitattributes            # Git configuration for LF line endings
+├── run.sh                    # 🚀 Root automation script (Build & Test)
+└── README.md                 # Project entry point
 ```
 
-## 🚀 Quick Start (One-Click Execution)
+## 💻 Native Setup (Non-Docker)
 
-This project is highly engineered and provides a fully automated containerized testing environment. It is strongly recommended that all users (both Windows and Linux) use Docker for compilation and testing.
+### Prerequisites & Permissions
+Before starting, ensure you have the correct permissions. On Linux/macOS, use `sudo` to grant execution rights to the automation scripts to avoid `Permission Denied` errors.
 
-> ⚠️ **Prerequisites**: Your host machine must have an NVIDIA GPU, and Docker along with the NVIDIA Container Toolkit must be properly installed. If you are a Windows (WSL2) user, please read [`docker/README.md`](docker/README.md) first to complete your environment setup.
-
-### 3 Steps to Run the Core Benchmarks:
-
-**1. Start and enter the clean development container**
-Use the infrastructure script located in the `docker` folder to start the environment:
+**1. Grant Permissions:**
 ```bash
-cd docker
-./run.sh run
+sudo chmod +x run.sh
+sudo chmod +x docker/run.sh
 ```
 
-**2. Execute the automated test script (Root Directory)**
-Once inside the container (your working directory will be `/workspace`), directly run the root-level automated script. 
-*(Note: Be careful not to confuse this root `run.sh` with the `docker/run.sh` used in step 1).*
+**2. Platform-Specific Requirements:**
+* **Linux (Recommended):** Ensure NVIDIA Drivers and CUDA Toolkit (12.1+) are installed.
+* **Windows:** Use **WSL2** (Ubuntu). Native Windows CMD/PowerShell is not supported for the C++ build chain.
+* **macOS:** Building the wrappers is possible, but **GPU execution (CUDA) is not supported** on macOS. Testing can only be done in "Mock" mode.
+
+### 🐍 Python Virtual Environment (venv)
+To keep the system clean and avoid dependency conflicts, always use a virtual environment:
+
 ```bash
-./run.sh
+# Create the environment
+python3 -m venv venv
+
+# Activate it
+# On Linux/macOS/WSL2:
+source venv/bin/activate
+# On Windows (if using native python, though WSL2 is preferred):
+.\venv\Scripts\activate
+
+# Install core dependencies
+sudo ./venv/bin/pip install -r requirements.txt
 ```
-This script will automatically clean the environment, compile the C++ PyBind11 extension, and sequentially execute the baseline bandwidth profiling and cuSZp compression benchmarks.
 
-**3. View the performance report**
-After the tests are completed, core metrics such as throughput (GB/s), compression ratio, and error bounds will be printed in the terminal and automatically saved as JSON report files (`baseline_results.json` & `compression_results.json`).
+### 🚀 Running the Pipeline
+Once the environment is active, run the root script to compile and benchmark:
+```bash
+sudo ./run.sh
+```
 
-## 📈 Project Implementation Status
+## 📄 Project Reports
+* **Proposal:** [Project_Proposal.pdf](project_proposal/Compress_Transfer_Decompress.pdf)
+* **Interim:** [FYP_2026_Interim_Report.pdf](interim_report/FYP_2026_Interim_Report.pdf)
+* **Final:** [FYP_2026_Final_Report.pdf](final_report/FYP_2026_Final_Report.pdf)
 
-- [x] **Phase 1: Architecture Design** - Analyzed vLLM source code structure and CPU-GPU data transfer bottlenecks.
-- [x] **Phase 2: Core Bridging** - Developed a C++ Wrapper for the cuSZp API and exposed it to Python via PyBind11.
-- [x] **Phase 3: Pipeline Integration** - Resolved CMake linking, dynamic enum types, and Docker mount masking issues, successfully compiling the shared library (`.so`).
-- [x] **Phase 4: Performance Validation** - Completed PCIe baseline bandwidth analysis and cuSZp compression throughput evaluation (Achieved nearly 8 GB/s one-way throughput on RTX 5080).
-- [ ] **Phase 5: vLLM Integration** - Pending the integration of `CompressedSwapManager` into vLLM's `CacheEngine` for real-world end-to-end LLM inference testing.
-
-## 📚 References
-
-1. Huang, Y., et al. (2023). cuSZp: An Ultra-fast GPU Error-bounded Lossy Compression Framework. SC'23.
-2. Kwon, W., et al. (2023). Efficient memory management for large language model serving with pagedattention. SOSP'23.
+---
+*For Docker-based deployment, please refer to the dedicated guide in [docker/README.md](docker/README.md).*
