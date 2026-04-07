@@ -57,7 +57,8 @@ target_link_libraries(cuszp_wrapper_cpp PRIVATE
     ${CUSZP_LIB}
     ${CUDA_LIBRARIES}
     ${CUDA_CUDART_LIBRARY}
-    ${TORCH_LIBRARIES}    # 👉 新增：必须链接 Torch 库
+    ${TORCH_LIBRARIES}
+    torch_python
 )
 
 # 编译选项
