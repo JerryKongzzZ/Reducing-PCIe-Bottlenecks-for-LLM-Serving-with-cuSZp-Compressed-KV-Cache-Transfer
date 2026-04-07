@@ -1,10 +1,10 @@
 """
-压缩性能基准测试脚本
+Compression performance benchmark script
 
-这个脚本用于测试cuSZp压缩的性能，包括：
-- 压缩/解压缩速度
-- 压缩比
-- 错误分析
+This script is used to test the performance of cuSZp compression, including:
+- Compression/Decompression speed
+- Compression ratio
+- Error analysis
 """
 
 import torch
@@ -12,94 +12,93 @@ import time
 import argparse
 import logging
 import numpy as np
-from typing import Dict, List
 import json
-import ctypes
+import sys
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-import sys
-import os
-# 将编译好的扩展目录加入到系统路径中
-# 假设脚本在 benchmarks/ 目录下，扩展在 integration/compression_pipeline/ 目录下
+# Add the compiled extension directory to the system path
+# Assuming the script is in benchmarks/ and the extension is in integration/compression_pipeline/
 current_dir = os.path.dirname(os.path.abspath(__file__))
-extension_dir = os.path.join(current_dir, '../integration/compression_pipeline')
-sys.path.append(extension_dir)
+pipeline_dir = os.path.abspath(os.path.join(current_dir, '..', 'integration', 'compression_pipeline'))
+if pipeline_dir not in sys.path:
+    sys.path.insert(0, pipeline_dir)
 
-# 尝试导入cuSZp包装器
+# Try to import cuSZp wrapper
 try:
     import cuszp_wrapper_cpp
-    CUSZP_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"cuSZp wrapper not available. Error: {e}")
-    CUSZP_AVAILABLE = False
+    logger.error(f"Failed to import cuszp_wrapper_cpp: {e}")
+    logger.error(f"Make sure the C++ extension is compiled and available in {pipeline_dir}")
+    sys.exit(1)
+
 
 class CompressionBenchmark:
-    """压缩性能基准测试"""
+    """Compression performance benchmark"""
     
     def __init__(self, device_id: int = 0):
         self.device_id = device_id
         self.device = torch.device(f"cuda:{device_id}")
         torch.cuda.set_device(device_id)
-    
-    def benchmark_compression(
+        
+    def benchmark(
         self,
         tensor_size: int,
         error_bound: float,
         encoding_mode: str = "plain",
-        num_iterations: int = 100
-    ) -> Dict:
+        num_iterations: int = 50
+    ) -> dict:
         """
-        基准测试压缩性能
+        Benchmark compression performance
         
         Args:
-            tensor_size: 张量大小（元素数量）
-            error_bound: 错误边界
-            encoding_mode: 编码模式
-            num_iterations: 迭代次数
+            tensor_size: Tensor size (number of elements)
+            error_bound: Error bound
+            encoding_mode: Encoding mode
+            num_iterations: Number of iterations
             
         Returns:
-            性能指标字典
+            Dictionary of performance metrics
         """
-        if not CUSZP_AVAILABLE:
-            logger.error("cuSZp wrapper not available")
-            return {}
-        
-        # 创建测试数据
+        # Create test data
         test_tensor = torch.randn(tensor_size, dtype=torch.float32, device=self.device)
         
-        # 创建压缩器
-        config = cuszp_wrapper_cpp.CompressionConfig()
-        config.error_bound = error_bound
-        config.use_relative_error = True
-        config.encoding_mode = self._parse_mode(encoding_mode)
-        config.processing_dim = cuszp_wrapper_cpp.CuszpDim.DIM_1D
-        config.data_type = cuszp_wrapper_cpp.CuszpType.TYPE_FLOAT
-        
+        # Create compressor
+        mode = self._parse_encoding_mode(encoding_mode)
+        config = cuszp_wrapper_cpp.CompressionConfig(
+            error_bound=error_bound,
+            use_relative_error=True,
+            processing_dim=cuszp_wrapper_cpp.CuszpDim.DIM_1D,
+            encoding_mode=mode,
+            data_type=cuszp_wrapper_cpp.CuszpType.TYPE_FLOAT
+        )
         compressor = cuszp_wrapper_cpp.CuSZpWrapper(config, self.device_id)
         
-        # 估算压缩缓冲区大小
-        original_size_bytes = tensor_size * 4
-        estimated_buffer_size = compressor.estimate_compressed_buffer_size(original_size_bytes)
+        # Estimate compressed buffer size
+        estimated_size = cuszp_wrapper_cpp.CuSZpWrapper.estimate_compressed_buffer_size(
+            test_tensor.numel() * test_tensor.element_size()
+        )
         
-        # 分配压缩缓冲区
+        # Allocate compressed buffer
         compressed_buffer = torch.empty(
-            (estimated_buffer_size,),
-            dtype=torch.uint8,
+            estimated_size, 
+            dtype=torch.uint8, 
             device=self.device
         )
         
-        # 预热
-        for _ in range(10):
-            # 💡 直接接收返回值，不需要 ctypes
-            _, compressed_buffer, _ = compressor.compress(
-                test_tensor,
-                compressed_buffer
-            )
+        # Warm up
+        for _ in range(5):
+            # 💡 Directly receive return values, no need for ctypes
+            success, compressed_buffer, actual_size = compressor.compress(test_tensor, compressed_buffer)
+            
+            if success:
+                decompressed_tensor = torch.empty_like(test_tensor)
+                compressor.decompress(compressed_buffer, actual_size, decompressed_tensor)
         torch.cuda.synchronize()
         
-        # 测量压缩时间
+        # Measure compression time
         compression_times = []
         compressed_sizes = []
         
@@ -107,160 +106,148 @@ class CompressionBenchmark:
             torch.cuda.synchronize()
             start = time.perf_counter()
             
-            # 💡 使用新 API
-            success, compressed_buffer, actual_size = compressor.compress(
-                test_tensor,
-                compressed_buffer
-            )
+            # 💡 Use new API
+            success, compressed_buffer, actual_size = compressor.compress(test_tensor, compressed_buffer)
             
             torch.cuda.synchronize()
             end = time.perf_counter()
             
             if success:
                 compression_times.append(end - start)
-                compressed_sizes.append(actual_size) # 💡 直接用 actual_size
+                compressed_sizes.append(actual_size) # 💡 Directly use actual_size
         
-        # 测量解压缩时间
+        # Measure decompression time
         decompression_times = []
         
-        for _ in range(num_iterations):
-            torch.cuda.synchronize()
-            start = time.perf_counter()
-            decompressed_tensor = torch.empty_like(test_tensor)
-            success = compressor.decompress(
-                compressed_buffer,
-                compressed_sizes[0],
-                decompressed_tensor
-            )
-            torch.cuda.synchronize()
-            end = time.perf_counter()
+        if len(compressed_sizes) > 0:
+            actual_size = compressed_sizes[0]
             
-            if success:
+            for _ in range(num_iterations):
+                decompressed_tensor = torch.empty_like(test_tensor)
+                
+                torch.cuda.synchronize()
+                start = time.perf_counter()
+                
+                compressor.decompress(compressed_buffer, actual_size, decompressed_tensor)
+                
+                torch.cuda.synchronize()
+                end = time.perf_counter()
+                
                 decompression_times.append(end - start)
         
-        # 计算性能指标
-        avg_compression_time = np.mean(compression_times)
-        avg_decompression_time = np.mean(decompression_times)
-        avg_compressed_size = np.mean(compressed_sizes)
+        # Calculate performance metrics
+        original_size_bytes = tensor_size * 4  # float32 = 4 bytes
+        avg_comp_time = np.mean(compression_times) if compression_times else 0
+        avg_decomp_time = np.mean(decompression_times) if decompression_times else 0
         
-        compression_speed = original_size_bytes / avg_compression_time / 1e9  # GB/s
-        decompression_speed = original_size_bytes / avg_decompression_time / 1e9  # GB/s
-        compression_ratio = original_size_bytes / avg_compressed_size
+        comp_bandwidth = (original_size_bytes / avg_comp_time / 1e9) if avg_comp_time > 0 else 0
+        decomp_bandwidth = (original_size_bytes / avg_decomp_time / 1e9) if avg_decomp_time > 0 else 0
         
-        # 计算错误
+        avg_compressed_size = np.mean(compressed_sizes) if compressed_sizes else original_size_bytes
+        compression_ratio = original_size_bytes / avg_compressed_size if avg_compressed_size > 0 else 1.0
+        
+        # Calculate error
         decompressed_tensor = torch.empty_like(test_tensor)
-        compressor.decompress(
-            compressed_buffer,
-            compressed_sizes[0],
-            decompressed_tensor
-        )
+        compressor.decompress(compressed_buffer, int(avg_compressed_size), decompressed_tensor)
         
         abs_errors = torch.abs(test_tensor - decompressed_tensor)
         max_error = torch.max(abs_errors).item()
         mean_error = torch.mean(abs_errors).item()
         
-        results = {
-            "tensor_size": tensor_size,
-            "original_size_bytes": original_size_bytes,
-            "compressed_size_bytes": avg_compressed_size,
-            "compression_ratio": compression_ratio,
-            "compression_time_ms": avg_compression_time * 1000,
-            "decompression_time_ms": avg_decompression_time * 1000,
-            "compression_speed_gbps": compression_speed,
-            "decompression_speed_gbps": decompression_speed,
-            "max_error": max_error,
-            "mean_error": mean_error,
-            "error_bound": error_bound,
-            "encoding_mode": encoding_mode
-        }
-        
         logger.info(
             f"Size: {tensor_size}, "
-            f"Compression: {compression_speed:.2f} GB/s, "
-            f"Decompression: {decompression_speed:.2f} GB/s, "
+            f"Compression: {comp_bandwidth:.2f} GB/s, "
+            f"Decompression: {decomp_bandwidth:.2f} GB/s, "
             f"Ratio: {compression_ratio:.2f}x, "
             f"Max Error: {max_error:.2e}"
         )
         
-        return results
-    
-    def _parse_mode(self, mode: str):
-        """解析编码模式"""
-        mode_map = {
-            "fixed": cuszp_wrapper_cpp.CuszpMode.MODE_FIXED,
-            "plain": cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN,
-            "outlier": cuszp_wrapper_cpp.CuszpMode.MODE_OUTLIER
+        return {
+            "tensor_size": tensor_size,
+            "original_size_bytes": original_size_bytes,
+            "compressed_size_bytes": float(avg_compressed_size),
+            "compression_ratio": float(compression_ratio),
+            "compression_time_ms": float(avg_comp_time * 1000),
+            "decompression_time_ms": float(avg_decomp_time * 1000),
+            "compression_bandwidth_GB_s": float(comp_bandwidth),
+            "decompression_bandwidth_GB_s": float(decomp_bandwidth),
+            "max_absolute_error": float(max_error),
+            "mean_absolute_error": float(mean_error),
+            "error_bound_setting": error_bound
         }
-        return mode_map.get(mode.lower(), cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN)
-    
-    def benchmark_error_bound_sweep(
+
+    def _parse_encoding_mode(self, mode_str: str):
+        """Parse encoding mode"""
+        mode_str = mode_str.lower()
+        if mode_str == "fixed":
+            return cuszp_wrapper_cpp.CuszpMode.MODE_FIXED
+        elif mode_str == "plain":
+            return cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN
+        elif mode_str == "outlier":
+            return cuszp_wrapper_cpp.CuszpMode.MODE_OUTLIER
+        else:
+            logger.warning(f"Unknown mode {mode_str}, using PLAIN")
+            return cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN
+            
+    def scan_error_bounds(
         self,
         tensor_size: int,
-        error_bounds: List[float],
+        error_bounds: list,
         encoding_mode: str = "plain"
-    ) -> List[Dict]:
-        """扫描不同错误边界的性能"""
+    ):
+        """Scan performance with different error bounds"""
         results = []
+        logger.info(f"Scanning error bounds for tensor size {tensor_size}...")
         
-        for error_bound in error_bounds:
-            result = self.benchmark_compression(
-                tensor_size, error_bound, encoding_mode
+        for eb in error_bounds:
+            logger.info(f"Testing error bound: {eb}")
+            res = self.benchmark(
+                tensor_size=tensor_size,
+                error_bound=eb,
+                encoding_mode=encoding_mode,
+                num_iterations=20  # Reduce iterations for scanning
             )
-            results.append(result)
-        
+            results.append(res)
+            
         return results
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compression performance benchmark")
+    parser = argparse.ArgumentParser(description="cuSZp compression benchmarking")
     parser.add_argument("--device-id", type=int, default=0, help="GPU device ID")
-    parser.add_argument("--tensor-size", type=int, default=1048576,
-                       help="Tensor size (number of elements)")
-    parser.add_argument("--error-bound", type=float, default=1e-4,
-                       help="Error bound")
-    parser.add_argument("--encoding-mode", type=str, default="plain",
-                       choices=["fixed", "plain", "outlier"],
-                       help="Encoding mode")
-    parser.add_argument("--iterations", type=int, default=100,
-                       help="Number of iterations")
-    parser.add_argument("--error-bound-sweep", action="store_true",
-                       help="Sweep error bounds")
-    parser.add_argument("--error-bounds", type=float, nargs="+",
-                       default=[1e-6, 1e-5, 1e-4, 1e-3, 1e-2],
-                       help="Error bounds for sweep")
-    parser.add_argument("--output", type=str, default="compression_results.json",
-                       help="Output file for results")
+    parser.add_argument("--tensor-size", type=int, default=1048576, help="Tensor size to profile")
+    parser.add_argument("--error-bound", type=float, default=1e-4, help="Relative error bound")
+    parser.add_argument("--encoding-mode", type=str, default="plain", 
+                       choices=["fixed", "plain", "outlier"], help="Encoding mode")
+    parser.add_argument("--iterations", type=int, default=50, help="Number of iterations")
+    parser.add_argument("--scan-eb", action="store_true", help="Scan different error bounds")
+    parser.add_argument("--output", type=str, default="compression_results.json", help="Output file")
     
     args = parser.parse_args()
     
-    if not CUSZP_AVAILABLE:
-        logger.error("cuSZp wrapper not available. Please compile it first.")
-        return
-    
     benchmark = CompressionBenchmark(device_id=args.device_id)
     
-    # 打印GPU信息
+    # Print GPU info
     logger.info(f"GPU: {torch.cuda.get_device_name(args.device_id)}")
     logger.info(f"CUDA Version: {torch.version.cuda}")
     
-    if args.error_bound_sweep:
-        # 扫描错误边界
-        results = benchmark.benchmark_error_bound_sweep(
-            args.tensor_size,
-            args.error_bounds,
-            args.encoding_mode
+    if args.scan_eb:
+        # Scan error bounds
+        ebs = [1e-2, 1e-3, 1e-4, 1e-5]
+        results = benchmark.scan_error_bounds(
+            args.tensor_size, ebs, args.encoding_mode
         )
     else:
-        # 单次测试
-        result = benchmark.benchmark_compression(
-            args.tensor_size,
-            args.error_bound,
-            args.encoding_mode,
+        # Single test
+        res = benchmark.benchmark(
+            args.tensor_size, 
+            args.error_bound, 
+            args.encoding_mode, 
             args.iterations
         )
-        results = [result]
-    
-    # 保存结果
+        results = [res]
+        
+    # Save results
     output_data = {
         "results": results,
         "device": torch.cuda.get_device_name(args.device_id),
@@ -269,10 +256,9 @@ def main():
     
     with open(args.output, "w") as f:
         json.dump(output_data, f, indent=2)
-    
+        
     logger.info(f"Results saved to {args.output}")
 
 
 if __name__ == "__main__":
     main()
-

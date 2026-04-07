@@ -8,7 +8,7 @@ namespace py = pybind11;
 PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
     m.doc() = "cuSZp wrapper for vLLM integration";
     
-    // 👉 第一步：先把所有的枚举类型定义在最前面！
+    // 👉 Step 1: Define all enum types first!
     py::enum_<cuszp_dim_t>(m, "CuszpDim")
         .value("DIM_1D", CUSZP_DIM_1D)
         .value("DIM_2D", CUSZP_DIM_2D)
@@ -26,13 +26,13 @@ PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
         .value("TYPE_DOUBLE", CUSZP_TYPE_DOUBLE)
         .export_values();
 
-    // 👉 第二步：然后再定义 CompressionConfig 类
+    // 👉 Step 2: Then define CompressionConfig class
     py::class_<CuSZpWrapper::CompressionConfig>(m, "CompressionConfig")
         .def(py::init<>())
         .def(py::init<float, bool, cuszp_dim_t, cuszp_mode_t, cuszp_type_t>(),
              py::arg("error_bound") = 1e-4f,
              py::arg("use_relative_error") = true,
-             py::arg("processing_dim") = CUSZP_DIM_1D,  // 此时 PyBind11 已经认识它了！
+             py::arg("processing_dim") = CUSZP_DIM_1D,  // PyBind11 recognizes it now!
              py::arg("encoding_mode") = CUSZP_MODE_PLAIN,
              py::arg("data_type") = CUSZP_TYPE_FLOAT)
         .def_readwrite("error_bound", &CuSZpWrapper::CompressionConfig::error_bound)
@@ -41,20 +41,20 @@ PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
         .def_readwrite("encoding_mode", &CuSZpWrapper::CompressionConfig::encoding_mode)
         .def_readwrite("data_type", &CuSZpWrapper::CompressionConfig::data_type);
     
-    // CuSZpWrapper类
+    // CuSZpWrapper class
     py::class_<CuSZpWrapper>(m, "CuSZpWrapper")
         .def(py::init<const CuSZpWrapper::CompressionConfig&, int>(),
              py::arg("config"), py::arg("device_id") = 0)
         .def("compress", 
              [](CuSZpWrapper& self, torch::Tensor input_tensor, torch::Tensor compressed_buffer) {
                  size_t compressed_size = 0;
-                 // 自动获取 PyTorch 当前正在使用的 CUDA 流，保证与 vLLM 同步
+                 // Automatically get the CUDA stream currently used by PyTorch to synchronize with vLLM
                  cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();
                  
-                 // 调用实际 C++ 方法
+                 // Call the actual C++ method
                  bool success = self.compress(input_tensor, compressed_buffer, compressed_size, stream);
                  
-                 // 返回 Tuple 给 Python: (成功标志, 可能会被重新分配的 buffer, 压缩后实际大小)
+                 // Return Tuple to Python: (success flag, potentially reallocated buffer, actual compressed size)
                  return py::make_tuple(success, compressed_buffer, compressed_size);
              },
              py::arg("input_tensor"),
@@ -74,5 +74,3 @@ PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
                     &CuSZpWrapper::estimate_compressed_buffer_size)
         .def("get_config", &CuSZpWrapper::get_config)
         .def("update_config", &CuSZpWrapper::update_config);
-
-}

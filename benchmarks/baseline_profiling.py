@@ -1,8 +1,8 @@
 """
-基线性能分析脚本
+Baseline performance profiling script
 
-这个脚本用于在集成cuSZp之前测量vLLM的基线性能，
-特别是CPU-GPU数据传输的时间。
+This script is used to measure the baseline performance of vLLM before integrating cuSZp,
+specifically the CPU-GPU data transfer time.
 """
 
 import torch
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaselineProfiler:
-    """基线性能分析器"""
+    """Baseline performance profiler"""
     
     def __init__(self, device_id: int = 0):
         self.device_id = device_id
@@ -30,14 +30,14 @@ class BaselineProfiler:
         num_iterations: int = 100
     ) -> Dict[str, float]:
         """
-        分析Host-to-Device传输性能
+        Profile Host-to-Device transfer performance
         
         Args:
-            tensor_sizes: 张量大小列表（元素数量）
-            num_iterations: 迭代次数
+            tensor_sizes: List of tensor sizes (number of elements)
+            num_iterations: Number of iterations
             
         Returns:
-            性能指标字典
+            Dictionary of performance metrics
         """
         logger.info("Profiling H2D transfers...")
         
@@ -48,15 +48,15 @@ class BaselineProfiler:
         }
         
         for size in tensor_sizes:
-            # 创建CPU张量
+            # Create CPU tensor
             cpu_tensor = torch.randn(size, dtype=torch.float32)
             
-            # 预热
+            # Warm up
             for _ in range(10):
                 _ = cpu_tensor.to(self.device, non_blocking=False)
             torch.cuda.synchronize()
             
-            # 测量传输时间
+            # Measure transfer time
             transfer_times = []
             for _ in range(num_iterations):
                 torch.cuda.synchronize()
@@ -88,14 +88,14 @@ class BaselineProfiler:
         num_iterations: int = 100
     ) -> Dict[str, float]:
         """
-        分析Device-to-Host传输性能
+        Profile Device-to-Host transfer performance
         
         Args:
-            tensor_sizes: 张量大小列表（元素数量）
-            num_iterations: 迭代次数
+            tensor_sizes: List of tensor sizes (number of elements)
+            num_iterations: Number of iterations
             
         Returns:
-            性能指标字典
+            Dictionary of performance metrics
         """
         logger.info("Profiling D2H transfers...")
         
@@ -106,15 +106,15 @@ class BaselineProfiler:
         }
         
         for size in tensor_sizes:
-            # 创建GPU张量
+            # Create GPU tensor
             gpu_tensor = torch.randn(size, dtype=torch.float32, device=self.device)
             
-            # 预热
+            # Warm up
             for _ in range(10):
                 _ = gpu_tensor.cpu()
             torch.cuda.synchronize()
             
-            # 测量传输时间
+            # Measure transfer time
             transfer_times = []
             for _ in range(num_iterations):
                 torch.cuda.synchronize()
@@ -146,31 +146,31 @@ class BaselineProfiler:
         num_iterations: int = 100
     ) -> Dict[str, float]:
         """
-        分析异步传输和计算重叠的效果
+        Profile the effect of overlapping asynchronous transfer and computation
         
         Args:
-            tensor_size: 张量大小
-            num_iterations: 迭代次数
+            tensor_size: Tensor size
+            num_iterations: Number of iterations
             
         Returns:
-            性能指标字典
+            Dictionary of performance metrics
         """
         logger.info("Profiling async overlap...")
         
-        # 创建流
+        # Create streams
         transfer_stream = torch.cuda.Stream()
         compute_stream = torch.cuda.Stream()
         
         cpu_tensor = torch.randn(tensor_size, dtype=torch.float32)
         gpu_tensor = torch.randn(tensor_size, dtype=torch.float32, device=self.device)
         
-        # 预热
+        # Warm up
         for _ in range(10):
             with torch.cuda.stream(transfer_stream):
                 _ = cpu_tensor.to(self.device, non_blocking=True)
             torch.cuda.synchronize()
         
-        # 测量同步传输时间
+        # Measure synchronous transfer time
         sync_times = []
         for _ in range(num_iterations):
             torch.cuda.synchronize()
@@ -180,7 +180,7 @@ class BaselineProfiler:
             end = time.perf_counter()
             sync_times.append(end - start)
         
-        # 测量异步传输时间（与计算重叠）
+        # Measure asynchronous transfer time (overlapped with computation)
         async_times = []
         for _ in range(num_iterations):
             torch.cuda.synchronize()
@@ -188,7 +188,7 @@ class BaselineProfiler:
             with torch.cuda.stream(transfer_stream):
                 _ = cpu_tensor.to(self.device, non_blocking=True)
             with torch.cuda.stream(compute_stream):
-                # 模拟一些计算
+                # Simulate some computation
                 _ = gpu_tensor * 2.0
             torch.cuda.synchronize()
             end = time.perf_counter()
@@ -226,26 +226,26 @@ def main():
     
     profiler = BaselineProfiler(device_id=args.device_id)
     
-    # 打印GPU信息
+    # Print GPU info
     logger.info(f"GPU: {torch.cuda.get_device_name(args.device_id)}")
     logger.info(f"CUDA Version: {torch.version.cuda}")
     
-    # 分析H2D传输
+    # Profile H2D transfer
     h2d_results = profiler.profile_h2d_transfer(
         args.tensor_sizes, args.iterations
     )
     
-    # 分析D2H传输
+    # Profile D2H transfer
     d2h_results = profiler.profile_d2h_transfer(
         args.tensor_sizes, args.iterations
     )
     
-    # 分析异步重叠
+    # Profile async overlap
     overlap_results = profiler.profile_async_overlap(
         args.tensor_sizes[-1], args.iterations
     )
     
-    # 保存结果
+    # Save results
     import json
     results = {
         "h2d": h2d_results,
@@ -263,4 +263,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

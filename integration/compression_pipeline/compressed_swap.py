@@ -1,130 +1,143 @@
 """
-压缩传输管道：在vLLM的CPU-GPU交换中使用cuSZp压缩
-
-这个模块修改了vLLM的swap_out_blocks_to_host和swap_in_blocks_from_host函数，
-添加了压缩-传输-解压缩的工作流程。
+Integration module for vLLM to support compressed KV cache swapping.
+This module provides a wrapper and monkey-patching utilities to replace
+vLLM's original BlockSpaceManager or CacheEngine swapping methods.
 """
 
 import torch
 import ctypes
-from typing import Optional, Tuple
 import logging
+from typing import Dict, List, Tuple, Optional
+import sys
+import os
 
 logger = logging.getLogger(__name__)
 
-import sys
-import os
-# 将编译好的扩展目录加入到系统路径中
-# 假设脚本在 benchmarks/ 目录下，扩展在 integration/compression_pipeline/ 目录下
+# Try to import cuSZp wrapper
 current_dir = os.path.dirname(os.path.abspath(__file__))
-extension_dir = os.path.join(current_dir, '../integration/compression_pipeline')
-sys.path.append(extension_dir)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
-# 尝试导入cuSZp包装器
 try:
     import cuszp_wrapper_cpp
-    CUSZP_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"cuSZp wrapper not available. Error: {e}")
-    CUSZP_AVAILABLE = False
+    logger.error(f"Failed to import cuszp_wrapper_cpp: {e}")
+    logger.error("cuSZp compression will not be available.")
+    cuszp_wrapper_cpp = None
 
-class CompressedSwapManager:
-    """
-    管理压缩的CPU-GPU交换操作
-    """
+
+class CuSZpCompressor:
+    """Python wrapper for cuSZp C++ extension"""
     
     def __init__(
-        self,
-        enable_compression: bool = True,
+        self, 
         error_bound: float = 1e-4,
-        use_relative_error: bool = True,
         encoding_mode: str = "plain",
         device_id: int = 0
     ):
-        """
-        初始化压缩交换管理器
-        
-        Args:
-            enable_compression: 是否启用压缩
-            error_bound: 错误边界
-            use_relative_error: 是否使用相对错误边界
-            encoding_mode: 编码模式 ("fixed", "plain", "outlier")
-            device_id: GPU设备ID
-        """
-        self.enable_compression = enable_compression and CUSZP_AVAILABLE
+        if cuszp_wrapper_cpp is None:
+            raise RuntimeError("cuszp_wrapper_cpp is not available")
+            
+        self.error_bound = error_bound
         self.device_id = device_id
         
-        if self.enable_compression:
-            # 创建cuSZp包装器
-            config = cuszp_wrapper_cpp.CompressionConfig(
-                error_bound=error_bound,
-                use_relative_error=use_relative_error,
-                encoding_mode=self._parse_encoding_mode(encoding_mode),
-                processing_dim=1,  # 1D处理（适用于KV cache）
-                data_type=0  # float32
-            )
-            self.compressor = cuszp_wrapper_cpp.CuSZpWrapper(config, device_id)
+        # Parse encoding mode
+        mode = cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN
+        if encoding_mode.lower() == "fixed":
+            mode = cuszp_wrapper_cpp.CuszpMode.MODE_FIXED
+        elif encoding_mode.lower() == "outlier":
+            mode = cuszp_wrapper_cpp.CuszpMode.MODE_OUTLIER
             
-            # 创建CUDA流用于异步操作
-            self.compression_stream = torch.cuda.Stream(device=device_id)
-            self.decompression_stream = torch.cuda.Stream(device=device_id)
-            
-            logger.info(f"Compressed swap enabled with error_bound={error_bound}, mode={encoding_mode}")
-        else:
-            self.compressor = None
-            logger.info("Compressed swap disabled")
-    
-    def _parse_encoding_mode(self, mode: str) -> int:
-        """解析编码模式字符串到cuSZp枚举值"""
-        mode_map = {
-            "fixed": 0,
-            "plain": 1,
-            "outlier": 2
+        # Initialize configuration
+        self.config = cuszp_wrapper_cpp.CompressionConfig(
+            error_bound=error_bound,
+            use_relative_error=True,
+            processing_dim=cuszp_wrapper_cpp.CuszpDim.DIM_1D,
+            encoding_mode=mode,
+            data_type=cuszp_wrapper_cpp.CuszpType.TYPE_FLOAT
+        )
+        
+        # Initialize compressor
+        self.compressor = cuszp_wrapper_cpp.CuSZpWrapper(self.config, device_id)
+        
+        # Performance counters
+        self.stats = {
+            "bytes_original": 0,
+            "bytes_compressed": 0,
+            "swap_out_count": 0,
+            "swap_in_count": 0
         }
-        return mode_map.get(mode.lower(), 1)  # 默认使用plain
+        
+    def get_compression_ratio(self) -> float:
+        """Calculate average compression ratio"""
+        if self.stats["bytes_compressed"] == 0:
+            return 1.0
+        return self.stats["bytes_original"] / self.stats["bytes_compressed"]
+
+
+class CompressedCacheEngineMonkeyPatch:
+    """
+    Monkey patching utility for vLLM's CacheEngine.
+    This replaces the swap_in and swap_out methods to inject compression.
+    """
     
-    def swap_out_blocks_to_host_compressed(
-        self,
-        src_cache: torch.Tensor,
-        dst_cache: torch.Tensor,
-        src_block_indices: torch.Tensor,
-        dst_block_indices: torch.Tensor,
-    ) -> None:
-        """
-        压缩版本的swap_out：将GPU块压缩后传输到CPU
+    def __init__(self, cache_engine, compressor: CuSZpCompressor):
+        self.engine = cache_engine
+        self.compressor = compressor
         
-        工作流程：
-        1. 从GPU缓存中提取要交换的块
-        2. 在GPU上压缩这些块
-        3. 将压缩后的数据异步传输到CPU
-        4. 在CPU上存储压缩数据（而不是原始数据）
-        """
-        if not self.enable_compression:
-            # 回退到原始实现
-            self._swap_out_blocks_to_host_original(
-                src_cache, dst_cache, src_block_indices, dst_block_indices
-            )
+        # Save original methods
+        self._swap_out_blocks_to_host_original = self.engine._swap_out_blocks_to_host
+        self._swap_in_blocks_from_host_original = self.engine._swap_in_blocks_from_host
+        
+        # Host memory buffer for compressed data (can't be stored in regular cache)
+        # In a real implementation, we would need a dedicated compressed block manager
+        self.compressed_blocks_store = {}
+        
+    def patch(self):
+        """Apply monkey patch"""
+        logger.info("Patching vLLM CacheEngine with cuSZp compression...")
+        self.engine._swap_out_blocks_to_host = self._swap_out_blocks_to_host_patched
+        self.engine._swap_in_blocks_from_host = self._swap_in_blocks_from_host_patched
+        
+    def unpatch(self):
+        """Restore original methods"""
+        logger.info("Restoring original vLLM CacheEngine methods...")
+        self.engine._swap_out_blocks_to_host = self._swap_out_blocks_to_host_original
+        self.engine._swap_in_blocks_from_host = self._swap_in_blocks_from_host_original
+        
+    def _swap_out_blocks_to_host_patched(self, src_cache, dst_cache, src_block_indices, dst_block_indices):
+        """Patched swap_out_blocks_to_host method"""
+        # Note: This is a simplified prototype implementation
+        # In production vLLM, cache operations are highly optimized with custom CUDA kernels
+        
+        # Get shape info
+        num_blocks = len(src_block_indices)
+        if num_blocks == 0:
             return
+            
+        block_size_bytes = src_cache[0].element_size() * src_cache[0][0].numel()
+        total_bytes = num_blocks * block_size_bytes
         
-        try:
-            # 提取要交换的块
-            _src_cache = src_cache[:, src_block_indices]
-            
-            # 估算压缩缓冲区大小
-            original_size = _src_cache.numel() * _src_cache.element_size()
-            compressed_buffer_size = self.compressor.estimate_compressed_buffer_size(original_size)
-            
-            # 在GPU上分配压缩缓冲区
-            compressed_buffer = torch.empty(
-                (compressed_buffer_size,),
-                dtype=torch.uint8,
-                device=src_cache.device
-            )
-            
-            # 在压缩流上异步压缩
-            with torch.cuda.stream(self.compression_stream):
-                # 💡 修改这里：使用元组解包接收返回值，只传2个参数
-                success, compressed_buffer, actual_size = self.compressor.compress(
+        # For simplicity, we process block by block in this prototype
+        # Real implementation would use batched processing
+        for i, (src_idx, dst_idx) in enumerate(zip(src_block_indices, dst_block_indices)):
+            for layer_idx in range(len(src_cache)):
+                _src_cache = src_cache[layer_idx][src_idx]
+                
+                # Estimate compressed buffer size
+                estimated_size = cuszp_wrapper_cpp.CuSZpWrapper.estimate_compressed_buffer_size(
+                    _src_cache.numel() * _src_cache.element_size()
+                )
+                
+                # Allocate temporary buffer
+                compressed_buffer = torch.empty(
+                    estimated_size, 
+                    dtype=torch.uint8, 
+                    device=_src_cache.device
+                )
+                
+                # Compress
+                success, compressed_buffer, actual_size = self.compressor.compressor.compress(
                     _src_cache,
                     compressed_buffer
                 )
@@ -135,130 +148,78 @@ class CompressedSwapManager:
                         src_cache, dst_cache, src_block_indices, dst_block_indices
                     )
                     return
+                    
+                # Store metadata and compressed data (transfer to CPU)
+                # In real vLLM, this would go to a specialized pinned memory allocator
+                cpu_compressed = compressed_buffer[:actual_size].cpu()
                 
-                # 💡 修改这里：使用 actual_size 而不是 compressed_size.value
-                compressed_cpu = compressed_buffer[:actual_size].cpu()
+                # Save to our custom store
+                store_key = (layer_idx, int(dst_idx))
+                self.compressed_blocks_store[store_key] = {
+                    'data': cpu_compressed,
+                    'original_size': _src_cache.numel(),
+                    'shape': _src_cache.shape
+                }
                 
-                # 存储压缩数据（这里简化处理，实际需要修改vLLM的存储结构）
-                # TODO: 修改vLLM的CPU缓存结构以支持压缩数据
-                dst_cache[:, dst_block_indices] = _src_cache.cpu()  # 临时：仍使用原始数据
+                # Update statistics
+                self.compressor.stats["bytes_original"] += _src_cache.numel() * _src_cache.element_size()
+                self.compressor.stats["bytes_compressed"] += actual_size
+                self.compressor.stats["swap_out_count"] += 1
                 
-        except Exception as e:
-            logger.error(f"Error in compressed swap out: {e}")
-            # 回退到原始实现
-            self._swap_out_blocks_to_host_original(
-                src_cache, dst_cache, src_block_indices, dst_block_indices
-            )
-    
-    def swap_in_blocks_from_host_compressed(
-        self,
-        src_cache: torch.Tensor,
-        dst_cache: torch.Tensor,
-        src_block_indices: torch.Tensor,
-        dst_block_indices: torch.Tensor,
-    ) -> None:
-        """
-        压缩版本的swap_in：从CPU解压缩数据并传输到GPU
-        
-        工作流程：
-        1. 从CPU缓存中读取压缩数据
-        2. 异步传输压缩数据到GPU
-        3. 在GPU上解压缩
-        4. 将解压缩的数据写入GPU缓存
-        """
-        if not self.enable_compression:
-            # 回退到原始实现
-            self._swap_in_blocks_from_host_original(
-                src_cache, dst_cache, src_block_indices, dst_block_indices
-            )
+    def _swap_in_blocks_from_host_patched(self, src_cache, dst_cache, src_block_indices, dst_block_indices):
+        """Patched swap_in_blocks_from_host method"""
+        num_blocks = len(src_block_indices)
+        if num_blocks == 0:
             return
-        
-        try:
-            # 从CPU读取压缩数据
-            # 注意：这里假设src_cache包含压缩数据
-            # 实际实现中，需要修改vLLM来区分压缩和未压缩的数据
-            compressed_cpu = src_cache[:, src_block_indices]
             
-            # 异步传输到GPU
-            compressed_gpu = compressed_cpu.to(dst_cache.device, non_blocking=True)
-            
-            # 在解压缩流上异步解压缩
-            with torch.cuda.stream(self.decompression_stream):
-                _dst_cache = dst_cache[:, dst_block_indices]
-                original_size = compressed_cpu.numel()
+        for i, (src_idx, dst_idx) in enumerate(zip(src_block_indices, dst_block_indices)):
+            for layer_idx in range(len(dst_cache)):
+                store_key = (layer_idx, int(src_idx))
                 
-                # 💡 修改这里：去掉第四个 stream 参数
-                success = self.compressor.decompress(
-                    compressed_gpu,
-                    original_size,  # 压缩大小
-                    _dst_cache
-                )
-                
-                if not success:
-                    logger.warning("Decompression failed, falling back to uncompressed swap")
-                    self._swap_in_blocks_from_host_original(
-                        src_cache, dst_cache, src_block_indices, dst_block_indices
+                # Check if we have compressed data for this block
+                if store_key in self.compressed_blocks_store:
+                    block_info = self.compressed_blocks_store[store_key]
+                    compressed_cpu = block_info['data']
+                    original_size = block_info['original_size']
+                    
+                    # Transfer to GPU
+                    compressed_gpu = compressed_cpu.cuda(non_blocking=True)
+                    
+                    # Target buffer
+                    _dst_cache = dst_cache[layer_idx][dst_idx]
+                    
+                    # Decompress
+                    success = self.compressor.compressor.decompress(
+                        compressed_gpu,
+                        len(compressed_gpu),  # Compressed size
+                        _dst_cache
                     )
-                    return
-                
-        except Exception as e:
-            logger.error(f"Error in compressed swap in: {e}")
-            # 回退到原始实现
-            self._swap_in_blocks_from_host_original(
-                src_cache, dst_cache, src_block_indices, dst_block_indices
-            )
-    
-    def _swap_out_blocks_to_host_original(
-        self,
-        src_cache: torch.Tensor,
-        dst_cache: torch.Tensor,
-        src_block_indices: torch.Tensor,
-        dst_block_indices: torch.Tensor,
-    ) -> None:
-        """原始的非压缩swap_out实现"""
-        _src_cache = src_cache[:, src_block_indices]
-        dst_cache[:, dst_block_indices] = _src_cache.cpu()
-    
-    def _swap_in_blocks_from_host_original(
-        self,
-        src_cache: torch.Tensor,
-        dst_cache: torch.Tensor,
-        src_block_indices: torch.Tensor,
-        dst_block_indices: torch.Tensor,
-    ) -> None:
-        """原始的非压缩swap_in实现"""
-        _src_cache = src_cache[:, src_block_indices]
-        dst_cache[:, dst_block_indices] = _src_cache.to(dst_cache.device)
+                    
+                    if not success:
+                        logger.warning("Decompression failed, falling back to uncompressed swap")
+                        self._swap_in_blocks_from_host_original(
+                            src_cache, dst_cache, src_block_indices, dst_block_indices
+                        )
+                        return
+                        
+                    # Update statistics
+                    self.compressor.stats["swap_in_count"] += 1
+                else:
+                    # Fallback if block wasn't compressed (e.g., from an earlier session)
+                    self._swap_in_blocks_from_host_original(
+                        src_cache, dst_cache, [src_idx], [dst_idx]
+                    )
 
-
-# 全局压缩管理器实例（可以在vLLM初始化时创建）
-_global_compressed_swap_manager: Optional[CompressedSwapManager] = None
-
-
-def get_compressed_swap_manager() -> Optional[CompressedSwapManager]:
-    """获取全局压缩交换管理器"""
-    return _global_compressed_swap_manager
-
-
-def initialize_compressed_swap(
-    enable_compression: bool = True,
-    error_bound: float = 1e-4,
-    use_relative_error: bool = True,
-    encoding_mode: str = "plain",
-    device_id: int = 0
-) -> CompressedSwapManager:
+# Example usage function
+def setup_vllm_compression(engine, error_bound=1e-4):
     """
-    初始化全局压缩交换管理器
-    
-    这个函数应该在vLLM初始化时调用
+    Helper function to set up compression in an existing vLLM engine
     """
-    global _global_compressed_swap_manager
-    _global_compressed_swap_manager = CompressedSwapManager(
-        enable_compression=enable_compression,
-        error_bound=error_bound,
-        use_relative_error=use_relative_error,
-        encoding_mode=encoding_mode,
-        device_id=device_id
-    )
-    return _global_compressed_swap_manager
-
+    try:
+        compressor = CuSZpCompressor(error_bound=error_bound)
+        patcher = CompressedCacheEngineMonkeyPatch(engine.cache_engine, compressor)
+        patcher.patch()
+        return patcher
+    except Exception as e:
+        logger.error(f"Failed to setup vLLM compression: {e}")
+        return None

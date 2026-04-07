@@ -1,43 +1,43 @@
 cmake_minimum_required(VERSION 3.21)
 project(cuszp_wrapper)
 
-# 设置C++标准
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 查找依赖
+# Find dependencies
 find_package(CUDA REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 find_package(pybind11 REQUIRED)
-# 👉 新增：查找 Torch 库
+# 👉 New: Find Torch library
 find_package(Torch REQUIRED)
-# 👉 新增这一行：在 PyTorch 的安装目录下显式查找 torch_python 库
+# 👉 New: Explicitly find torch_python library in PyTorch's install directory
 find_library(TORCH_PYTHON_LIB torch_python PATHS "${TORCH_INSTALL_PREFIX}/lib")
 
-# 查找cuSZp
-# 假设cuSZp安装在 ../cuSZp/install
-set(CUSZP_ROOT "${CMAKE_SOURCE_DIR}/../../cuSZp")
+# Find cuSZp
+# cuSZp installed in /opt/cuSZp/install
+set(CUSZP_ROOT "/opt/cuSZp")
 set(CUSZP_INSTALL_DIR "${CUSZP_ROOT}/install")
 
-# cuSZp头文件路径
+# cuSZp include paths
 set(CUSZP_INCLUDE_DIRS
     "${CUSZP_ROOT}/include"
     "${CUSZP_INSTALL_DIR}/include"
 )
 
-# cuSZp库路径
+# cuSZp library paths
 set(CUSZP_LIB_DIRS
     "${CUSZP_INSTALL_DIR}/lib"
 )
 
-# 查找cuSZp库
+# Find cuSZp library
 find_library(CUSZP_LIB
     NAMES cuSZp libcuSZp
     PATHS ${CUSZP_LIB_DIRS}
     REQUIRED
 )
 
-# 包含目录
+# Include directories
 include_directories(
     ${CUSZP_INCLUDE_DIRS}
     ${CUDA_INCLUDE_DIRS}
@@ -45,38 +45,37 @@ include_directories(
     ${pybind11_INCLUDE_DIRS}
 )
 
-# 源文件
+# Source files
 set(SOURCES
     cuszp_wrapper.cpp
     pybind11_bindings.cpp
 )
 
-# 创建Python模块
+# Create Python module
 pybind11_add_module(cuszp_wrapper_cpp ${SOURCES})
 
-# 链接库
+# Link libraries
 target_link_libraries(cuszp_wrapper_cpp PRIVATE
     ${CUSZP_LIB}
     ${CUDA_LIBRARIES}
     ${CUDA_CUDART_LIBRARY}
     ${TORCH_LIBRARIES}
-    ${TORCH_PYTHON_LIB}    # 👉 修改这里：使用绝对路径变量
+    ${TORCH_PYTHON_LIB}    # 👉 Modified: Use absolute path variable
 )
 
-# 编译选项
+# Compile options
 target_compile_options(cuszp_wrapper_cpp PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>
-    ${TORCH_CXX_FLAGS}    # 👉 新增：应用 Torch 推荐的编译 Flag
+    ${TORCH_CXX_FLAGS}    # 👉 New: Apply Torch's recommended compilation flags
 )
 
-# 设置输出目录
+# Set output directory
 set_target_properties(cuszp_wrapper_cpp PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../compression_pipeline"
     PREFIX ""
 )
 
-# 安装规则（可选）
+# Installation rules (optional)
 install(TARGETS cuszp_wrapper_cpp
     LIBRARY DESTINATION lib
 )
-

@@ -4,32 +4,49 @@
 This project is part of the Final Year Project (FYP) 2026 at **The Hong Kong Polytechnic University**. 
 We integrate the **cuSZp** error-bounded lossy compression framework into the **vLLM** engine to optimize KV Cache swapping between CPU and GPU, specifically targeting performance gains on high-bandwidth hardware like the **RTX 5080**.
 
+## 🚀 TL;DR: One-Click Quick Start
+If you just want to run all the compilation and performance benchmark tests, simply copy the following script and execute it once in your host terminal (assuming Docker and NVIDIA Container Toolkit are installed):
+
+```bash
+# 1. Grant execution permissions and resolve Windows line ending issues (Safe for Mac/Linux users as well)
+chmod +x test.sh docker/run.sh
+sed -i 's/\r$//' test.sh docker/run.sh docker/Dockerfile
+
+# 2. Enter the Docker directory and automatically build the environment
+cd docker
+./run.sh build
+
+# 3. Automatically mount the directory and execute the test pipeline (C++ Compilation + Baseline + cuSZp Tests)
+./run.sh test
+```
+*After execution, the performance test results of all Benchmarks will be automatically saved in `.json` files generated in the root directory.*
+
+---
+
 ## 📁 Project Structure
 ```text
 PolyU_COMP_Final_Year_Project_2026_Spring/
-├── benchmarks/               # Performance profiling scripts
+├── benchmarks/               # Performance profiling scripts (Python)
 ├── docker/                   # Docker infrastructure (Dockerfile, run.sh)
 ├── final_report/             # Final FYP thesis (PDF)
-├── integration/              # Core source code (C++/Python)
+├── integration/              # Core source code (C++/Python bindings)
 ├── requirements.txt          # Python dependencies
-├── run.sh                    # 🚀 Root Automation Script (Builds & Tests)
+├── test.sh                   # 🚀 Root Automation Script (Builds & Tests)
 └── README.md                 # This comprehensive guide
 ```
 
 ---
 
-## 🛠️ Phase 1: Local Environment & Permission Setup
-
-Before starting the Docker process, you must prepare the root directory and ensure all scripts are executable.
+## 🛠️ Detailed Guide: Phase 1 (Local Environment Setup)
 
 ### 1. Grant Permissions (Mandatory)
 On Linux/WSL2, scripts created in Windows often lack execution bits.
 ```bash
-sudo chmod +x run.sh docker/run.sh
+chmod +x test.sh docker/run.sh
 ```
 
-### 2. Create Virtual Environment (Root Directory)
-Create the `venv` inside the project root to manage dependencies locally.
+### 2. Create Virtual Environment (Optional, for IDE Auto-completion)
+If you want better code completion experience in VS Code on your host machine, you can create a venv in the project root:
 ```bash
 # 1. Ensure you are in the project root
 cd PolyU_COMP_Final_Year_Project_2026_Spring
@@ -40,59 +57,58 @@ python3 -m venv venv
 # 3. Activate the environment
 source venv/bin/activate
 
-# 4. Install requirements (Using sudo path to ensure consistency)
-sudo ./venv/bin/pip install -r requirements.txt
+# 4. Install requirements locally
+./venv/bin/pip install -r requirements.txt
 ```
 
 ---
 
-## 🐳 Phase 2: Docker Workflow (Build then Run)
+## 🐳 Detailed Guide: Phase 2 (Docker Workflow)
 
 Docker handles the complex CUDA and PyTorch dependencies. Follow the order: **Build** -> **Run**.
 
 ### 1. Build the Docker Image
-This step "bakes" the environment. You only need to do this once unless the `Dockerfile` or `requirements.txt` changes.
+This step "bakes" the environment, automatically pulling PyTorch, CUDA, and compiling the original cuSZp framework.
 ```bash
 cd docker
-sudo ./run.sh build
+./run.sh build
 ```
 
-### 2. Run the Container
-This starts the environment and mounts your code into `/workspace`.
+### 2. Enter Interactive Container (Optional)
+If you need to manually debug or develop code, you can start an interactive shell mounting your local code:
 ```bash
-sudo ./run.sh run
+./run.sh run
 ```
 
 ---
 
-## 🚀 Phase 3: Execution inside the Container
+## ⚙️ Detailed Guide: Phase 3 (Execution inside Docker)
 
-Once you are inside the container (your terminal should show `root@container_id:/workspace#`), you run the root automation script to perform the actual work.
+When you are inside the container (`root@container_id:/workspace#`), you can run the full pipeline through the automated test script:
 
 ```bash
-# You are now at the root of the workspace inside Docker
-# Run the main automation script to compile C++ and run benchmarks
-sudo ./run.sh
+# Run C++ extension compilation and automated Benchmark tests
+./test.sh
 ```
 
 **What happens now?**
-1.  **Automated C++ Compilation**: Compiles the cuSZp PyBind11 wrapper.
-2.  **PCIe Profiling**: Measures raw H2D/D2H transfer speeds.
-3.  **Compression Benchmark**: Runs the cuSZp performance and accuracy tests.
+1.  **Automated C++ Compilation**: Automatically enters the `integration/cuszp_wrapper` directory and compiles the Python Wrapper for cuSZp via PyBind11 and CMake.
+2.  **PCIe Profiling**: Executes `benchmarks/baseline_profiling.py` to measure raw H2D/D2H tensor transfer latency under PCIe 4.0/5.0.
+3.  **Compression Benchmark**: Executes `benchmarks/compression_benchmark.py` to run the cuSZp compression performance tests, verifying compression ratio, throughput, and maximum absolute error (converging to 1e-4).
 
 ---
 
 ## ⚠️ Cross-Platform Troubleshooting (Windows/WSL2)
 
 ### 1. The "Command Not Found" Error (LF vs CRLF)
-If `sudo ./run.sh` fails even after `chmod`, it's likely Windows line endings.
+If `./test.sh` fails even after `chmod`, it's likely Windows line endings.
 * **Fix**: In VS Code, check the bottom-right corner. If it says **CRLF**, click it, change to **LF**, and save. 
-* **Command Fix**: `sudo sed -i 's/\r$//' run.sh`
+* **Command Fix**: `sed -i 's/\r$//' test.sh docker/run.sh`
 
 ### 2. Permanent Permission Lock (Git)
 To stop Git from losing your `chmod +x` settings:
 ```bash
-git update-index --chmod=+x run.sh
+git update-index --chmod=+x test.sh
 git update-index --chmod=+x docker/run.sh
 git commit -m "chore: lock executable permissions"
 ```

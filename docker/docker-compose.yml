@@ -12,13 +12,13 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - CUDA_VISIBLE_DEVICES=0
     volumes:
-      # 挂载项目目录以便代码更改
+      # Mount project directory for code changes
       - ../:/workspace
-      # 可选：挂载数据目录
+      # Optional: mount data directory
       - ./data:/workspace/data
     working_dir: /workspace
     stdin_open: true
     tty: true
-    # 默认命令：保持容器运行
+    # Default command: keep container running
     command: /bin/bash
 

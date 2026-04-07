@@ -1,15 +1,15 @@
 # Dockerfile for vLLM with cuSZp integration
-# 这个Dockerfile用于在支持CUDA的环境中构建和运行项目
+# This Dockerfile is used to build and run the project in a CUDA-supported environment
 
 FROM docker.io/nvidia/cuda:12.1.1-devel-ubuntu22.04
 
-# 设置环境变量
+# Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=${CUDA_HOME}/bin:${PATH}
 ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 
-# 安装系统依赖
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     cmake \
@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装Python依赖
+# Install Python dependencies
 RUN pip3 install --upgrade pip
 RUN pip3 install \
     torch \
@@ -31,24 +31,24 @@ RUN pip3 install \
     wheel \
     vllm
 
-# 设置工作目录
+# Set working directory
 WORKDIR /workspace
 
-# 复制项目文件（排除cuSZp目录，因为将从GitHub克隆）
+# Copy project files (excluding cuSZp directory as it will be cloned from GitHub)
 COPY . /workspace/
 
-# 克隆cuSZp仓库（如果目录已存在则先删除）
-RUN rm -rf /workspace/cuSZp && \
-    git clone https://github.com/szcompressor/cuSZp.git /workspace/cuSZp
+# Clone cuSZp repository (delete if directory already exists)
+RUN rm -rf /opt/cuSZp && \
+    git clone https://github.com/szcompressor/cuSZp.git /opt/cuSZp
 
-# 编译cuSZp
-WORKDIR /workspace/cuSZp
+# Compile cuSZp
+WORKDIR /opt/cuSZp
 RUN mkdir -p build && cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../install/ .. && \
     make -j$(nproc) && \
     make install
 
-# 编译cuSZp包装器
+# Compile cuSZp wrapper
 WORKDIR /workspace/integration/cuszp_wrapper
 RUN mkdir -p build && cd build && \
     cmake .. \
@@ -57,9 +57,9 @@ RUN mkdir -p build && cd build && \
       -DCMAKE_CXX_FLAGS="$(python3 -c 'import torch.utils.cpp_extension as E; print(" ".join("-I"+p for p in E.include_paths()))')" && \
     make -j$(nproc)
 
-# 返回工作目录
+# Return to working directory
 WORKDIR /workspace
 
-# 设置默认命令
+# Set default command
 CMD ["/bin/bash"]
 
