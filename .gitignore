@@ -40,4 +40,5 @@ compile_commands.json
 *~
 
 # Generated results
+*_kv_cache.pt
 *_results.json
