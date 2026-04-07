@@ -24,7 +24,7 @@ PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
         .def(py::init<float, bool, cuszp_dim_t, cuszp_mode_t, cuszp_type_t>(),
              py::arg("error_bound") = 1e-4f,
              py::arg("use_relative_error") = true,
-             py::arg("processing_dim") = CUSZP_DIM_1,
+             py::arg("processing_dim") = CUSZP_DIM_1D,
              py::arg("encoding_mode") = CUSZP_MODE_PLAIN,
              py::arg("data_type") = CUSZP_TYPE_FLOAT)
         .def_readwrite("error_bound", &CuSZpWrapper::CompressionConfig::error_bound)

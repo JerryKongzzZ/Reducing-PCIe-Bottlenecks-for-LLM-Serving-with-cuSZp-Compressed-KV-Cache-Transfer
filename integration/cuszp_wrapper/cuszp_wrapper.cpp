@@ -163,17 +163,17 @@ uint3 CuSZpWrapper::get_tensor_dims(torch::Tensor tensor) {
     uint3 dims = {0, 0, 0};
     auto shape = tensor.sizes();
     
-    if (config_.processing_dim == CUSZP_DIM_1) {
+    if (config_.processing_dim == CUSZP_DIM_1D) {
         // 1D处理：所有维度信息设为0（cuSZp会忽略）
         dims.x = dims.y = dims.z = 0;
-    } else if (config_.processing_dim == CUSZP_DIM_2) {
+    } else if (config_.processing_dim == CUSZP_DIM_2D) {
         // 2D处理：使用最后两个维度
         if (shape.size() >= 2) {
             dims.y = static_cast<unsigned int>(shape[shape.size() - 2]);
             dims.x = static_cast<unsigned int>(shape[shape.size() - 1]);
             dims.z = 1;
         }
-    } else if (config_.processing_dim == CUSZP_DIM_3) {
+    } else if (config_.processing_dim == CUSZP_DIM_3D) {
         // 3D处理：使用最后三个维度
         if (shape.size() >= 3) {
             dims.z = static_cast<unsigned int>(shape[shape.size() - 3]);

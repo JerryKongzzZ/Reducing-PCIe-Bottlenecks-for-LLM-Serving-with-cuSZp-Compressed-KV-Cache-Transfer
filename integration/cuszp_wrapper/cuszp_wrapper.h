@@ -21,7 +21,7 @@ public:
     struct CompressionConfig {
         float error_bound = 1e-4f;           // 错误边界（相对或绝对）
         bool use_relative_error = true;     // 是否使用相对错误边界
-        cuszp_dim_t processing_dim = CUSZP_DIM_1;  // 处理维度（1D/2D/3D）
+        cuszp_dim_t processing_dim = CUSZP_DIM_1D;  // 处理维度（1D/2D/3D）
         cuszp_mode_t encoding_mode = CUSZP_MODE_PLAIN;  // 编码模式
         cuszp_type_t data_type = CUSZP_TYPE_FLOAT;  // 数据类型（float/double）
     };
