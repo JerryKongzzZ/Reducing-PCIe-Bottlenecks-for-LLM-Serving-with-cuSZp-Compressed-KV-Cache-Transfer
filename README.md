@@ -4,47 +4,6 @@
 This project is part of the Final Year Project (FYP) 2026 at **The Hong Kong Polytechnic University**. 
 We integrate the **cuSZp** error-bounded lossy compression framework into the **vLLM** engine to optimize KV Cache swapping between CPU and GPU, specifically targeting performance gains on high-bandwidth hardware like the **RTX 5080**.
 
-## 🚀 TL;DR: Quick Start Options
-You can run this project in two ways: **via Docker** (Recommended for quick testing without polluting your host) or **Natively on Linux/WSL2** (Recommended for development and direct hardware access).
-
-### Option A: Run via Docker (Easiest)
-*Prerequisites: Docker and NVIDIA Container Toolkit must be installed.*
-```bash
-# 1. Grant execution permissions and resolve Windows line ending issues
-chmod +x test.sh docker/run.sh
-sed -i 's/\r$//' test.sh docker/run.sh docker/Dockerfile
-
-# 2. Enter the Docker directory, build the environment, and run the pipeline
-cd docker
-./run.sh build
-./run.sh test
-```
-*Results will be automatically saved in `.json` files in the root directory.*
-
-### Option B: Run Natively (Linux / WSL2)
-*Prerequisites: Python 3.10+, CMake, and CUDA Toolkit must be installed on your host system.*
-```bash
-# 1. Grant execution permissions and resolve Windows line ending issues
-chmod +x test.sh docker/run.sh
-sed -i 's/\r$//' test.sh docker/run.sh docker/Dockerfile
-
-# 2. Install cuSZp core library globally (Required by CMakeLists)
-sudo rm -rf /opt/cuSZp
-sudo git clone https://github.com/szcompressor/cuSZp.git /opt/cuSZp
-cd /opt/cuSZp && sudo mkdir -p build && cd build
-sudo cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../install/ ..
-sudo make -j$(nproc) && sudo make install
-cd - # Return to project root
-
-# 3. Setup Python virtual environment and install dependencies
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# 4. Run the automated test script
-./test.sh
-```
-
 ---
 
 ## 📁 Project Structure
@@ -61,46 +20,72 @@ PolyU_COMP_Final_Year_Project_2026_Spring/
 
 ---
 
-## 🐳 Detailed Guide A: Docker Workflow (Recommended)
+## 🚀 Execution Guide
 
+You can run this project in two ways: **via Docker** (Recommended for quick testing without polluting your host) or **Natively on Linux/WSL2** (Recommended for development and direct hardware access).
+
+### Option A: Run via Docker (Recommended)
 Docker handles the complex CUDA and PyTorch dependencies automatically. This is the safest way to avoid dependency hell.
 
-### 1. Build the Docker Image
+**0. Install Prerequisites (Ubuntu/Debian)**
+Ensure you have Docker and the NVIDIA Container Toolkit installed:
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Install NVIDIA Container Toolkit
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+**1. Grant permissions and resolve Windows line ending issues**
+```bash
+chmod +x test.sh docker/run.sh
+sed -i 's/\r$//' test.sh docker/run.sh docker/Dockerfile
+```
+
+**2. Build the Docker Environment**
 This step "bakes" the environment, automatically pulling PyTorch, CUDA, and compiling the original cuSZp framework into the image.
 ```bash
 cd docker
 ./run.sh build
 ```
 
-### 2. Execute the Pipeline
+**3. Execute the Pipeline**
 This runs `./test.sh` inside the ephemeral container and mounts your local files so results are saved to your host:
 ```bash
-cd docker
 ./run.sh test
 ```
 
-### 3. Enter Interactive Container (Optional)
-If you need to manually debug or develop code inside the isolated environment:
-```bash
-cd docker
-./run.sh run
-# Once inside the container (root@container_id:/workspace#), you can manually run:
-# ./test.sh
-```
+*(Optional) Interactive debugging:*
+If you need to manually debug or develop code inside the isolated environment, use `./run.sh run` to open an interactive bash session.
 
 ---
 
-## 💻 Detailed Guide B: Native Linux / WSL2 Workflow
-
+### Option B: Run Natively (Linux / WSL2)
 If you are developing actively, you might want to run natively to utilize your host IDE's code completion (e.g., VS Code Pylance/C++ Intellisense) and avoid Docker overhead.
 
-### 1. Install System Dependencies
-Ensure you have `git`, `cmake`, `build-essential`, and a valid `CUDA Toolkit` (nvcc) installed.
+**0. Install System Dependencies**
+Ensure you have `git`, `cmake`, `build-essential`, and Python dependencies installed. You must also have the **CUDA Toolkit** installed manually beforehand.
 ```bash
-sudo apt-get update && sudo apt-get install -y git cmake build-essential python3.10-dev python3-pip
+sudo apt-get update 
+sudo apt-get install -y git cmake build-essential python3.10-dev python3-venv python3-pip
 ```
 
-### 2. Install cuSZp Core Library
+**1. Grant permissions and resolve Windows line ending issues**
+```bash
+chmod +x test.sh docker/run.sh
+sed -i 's/\r$//' test.sh docker/run.sh docker/Dockerfile
+```
+
+**2. Install cuSZp Core Library globally**
 Our C++ Wrapper expects the `cuSZp` core framework to be located at `/opt/cuSZp`. You must compile it globally:
 ```bash
 sudo rm -rf /opt/cuSZp
@@ -110,19 +95,19 @@ sudo mkdir -p build && cd build
 sudo cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../install/ ..
 sudo make -j$(nproc)
 sudo make install
+cd - # Return to project root
 ```
 
-### 3. Prepare Python Environment
+**3. Prepare Python Environment**
 Create a local virtual environment to avoid polluting global Python packages.
 ```bash
-cd /path/to/PolyU_COMP_Final_Year_Project_2026_Spring
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 4. Run the Pipeline
+**4. Run the Pipeline**
 Simply execute the root script. It will compile the C++ PyBind11 wrapper and trigger the benchmarks:
 ```bash
 ./test.sh
@@ -135,6 +120,7 @@ Whether running natively or in Docker, the root automation script performs 3 mai
 1.  **Automated C++ Compilation**: Enters `integration/cuszp_wrapper`, cleans the build cache, and compiles the Python Wrapper for cuSZp via PyBind11 and CMake.
 2.  **PCIe Profiling**: Executes `benchmarks/baseline_profiling.py` to measure raw H2D/D2H tensor transfer latency under PCIe 4.0/5.0.
 3.  **Compression Benchmark**: Executes `benchmarks/compression_benchmark.py` to run the cuSZp compression performance tests, verifying compression ratio, throughput, and maximum absolute error (converging to 1e-4).
+*Results will be automatically saved in `.json` files in the root directory.*
 
 ---
 
