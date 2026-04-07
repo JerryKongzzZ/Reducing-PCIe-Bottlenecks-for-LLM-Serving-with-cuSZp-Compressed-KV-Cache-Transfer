@@ -47,9 +47,6 @@ python3 -m venv venv
 # 2. Activate the environment
 # For Linux/WSL2/macOS:
 source venv/bin/activate
-
-# 3. Install dependencies with sudo if required by your environment
-sudo ./venv/bin/pip install -r requirements.txt
 ```
 
 ---
