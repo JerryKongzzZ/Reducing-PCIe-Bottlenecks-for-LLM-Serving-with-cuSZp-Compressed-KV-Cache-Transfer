@@ -14,8 +14,8 @@ FYP_Workspace/
 │   ├── cuszp_wrapper/        # cuSZp C++ and PyBind11 wrappers
 │   └── compression_pipeline/ # Python-level compression pipeline logic
 ├── benchmarks/               # Performance benchmarking scripts
-├── docker/                   # Docker environment configurations & usage guide
-├── run_all.sh                # 🚀 Automated one-click build and test script
+├── docker/                   # Docker configurations & usage guide (contains its own run.sh)
+├── run.sh                    # 🚀 Automated one-click build and test script (Root)
 └── README.md                 # Project overview documentation
 ```
 
@@ -28,16 +28,19 @@ This project is highly engineered and provides a fully automated containerized t
 ### 3 Steps to Run the Core Benchmarks:
 
 **1. Start and enter the clean development container**
+Use the infrastructure script located in the `docker` folder to start the environment:
 ```bash
 cd docker
 ./run.sh run
 ```
 
-**2. Execute the automated script**
-Once inside the container (working directory `/workspace`), directly run the automated script. This script will automatically clean the environment, compile the C++ PyBind11 extension, and sequentially execute the baseline bandwidth profiling and cuSZp compression benchmarks.
+**2. Execute the automated test script (Root Directory)**
+Once inside the container (your working directory will be `/workspace`), directly run the root-level automated script. 
+*(Note: Be careful not to confuse this root `run.sh` with the `docker/run.sh` used in step 1).*
 ```bash
-./run_all.sh
+./run.sh
 ```
+This script will automatically clean the environment, compile the C++ PyBind11 extension, and sequentially execute the baseline bandwidth profiling and cuSZp compression benchmarks.
 
 **3. View the performance report**
 After the tests are completed, core metrics such as throughput (GB/s), compression ratio, and error bounds will be printed in the terminal and automatically saved as JSON report files (`baseline_results.json` & `compression_results.json`).

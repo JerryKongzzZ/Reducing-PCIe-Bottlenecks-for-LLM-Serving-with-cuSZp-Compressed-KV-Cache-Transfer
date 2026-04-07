@@ -36,24 +36,24 @@ Developing C++ CUDA extensions using Docker on Windows is prone to pitfalls. Ple
 
 ## 💻 Container Lifecycle Management
 
-We provide a convenient manager, `run.sh`, to control the container lifecycle. Execute it in the `docker/` directory:
+We provide a convenient infrastructure script, `docker/run.sh`, to control the container lifecycle. Execute it **from within the `docker/` directory**:
 
 | Command | Description |
 |---------|-------------|
 | `./run.sh build` | **(Rarely Used)** Builds the base image. Since it sets up CUDA 12.1.1 and PyTorch dependencies, the initial build may be slow. You usually only need to run this if you modify system-level dependencies in the `Dockerfile`. |
 | `./run.sh run` | **(Daily Use)** Starts and enters an interactive container. This command mounts the project root directory from your host machine to `/workspace` inside the container. Any code you write or `.so` files you compile inside the container will be synchronized directly to your local Windows/Linux disk. |
 
-> 💡 **Best Practice**: We do **not** recommend using `./run.sh build` to pack your project code directly into the image. The correct development workflow for this project is: Use `./run.sh run` to enter the container with the base environment, then directly call `./run_all.sh` from the root directory for "just-in-time compilation and execution."
+> 💡 **Best Practice**: We do **not** recommend using `docker/run.sh build` to pack your project code directly into the image. The correct development workflow for this project is: Use `docker/run.sh run` to enter the container with the base environment, then directly call the root-level script `./run.sh` from the `/workspace` directory for "just-in-time compilation and execution."
 
 ## ❓ Troubleshooting (FAQ)
 
 ### Q1: What should I do if I get `cannot find -ltorch_python` during C++ extension compilation?
-**A**: This usually happens because CMake cannot find the internal library path of PyTorch. Please ensure you are using `./run_all.sh` from the project root to compile, as this script has fixed absolute path mounting issues via environment variables and CMake flags.
+**A**: This usually happens because CMake cannot find the internal library path of PyTorch. Please ensure you are using the root-level `./run.sh` to compile, as this script has fixed absolute path mounting issues via environment variables and CMake flags.
 
 ### Q2: Why does it say `ModuleNotFoundError` when I `import cuszp_wrapper_cpp`?
 **A**: This is the classic "Docker mount masking" issue. If you haven't compiled the `.so` file on your host machine, and the `/workspace` inside the container is overwritten by the empty directory from your host, Python won't find the module.
-**Solution**: Upon entering the container, immediately run `run_all.sh` to generate the compilation artifacts directly in the container's mounted directory.
+**Solution**: Upon entering the container, immediately run `./run.sh` (the one located in the root directory `/workspace`) to generate the compilation artifacts directly in the container's mounted directory.
 
-### Q3: Why do I get `bad interpreter` or command not found when running `./run_all.sh` on Windows?
+### Q3: Why do I get `bad interpreter` or command not found when running the root `./run.sh` on Windows?
 **A**: This is because Windows automatically changes the script's line endings to `CRLF`.
 **Solution**: This project has locked line endings to `LF` via `.gitattributes`. If you still encounter this issue, please manually switch the script's line endings back to `LF` in the bottom right corner of VS Code.
