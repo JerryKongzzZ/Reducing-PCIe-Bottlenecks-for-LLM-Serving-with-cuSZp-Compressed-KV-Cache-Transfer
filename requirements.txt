@@ -3,4 +3,4 @@ numpy
 pybind11
 setuptools
 wheel
-vllm
+vllmtransformers

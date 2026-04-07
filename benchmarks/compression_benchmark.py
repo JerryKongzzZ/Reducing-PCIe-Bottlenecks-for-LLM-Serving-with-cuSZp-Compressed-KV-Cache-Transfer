@@ -48,7 +48,8 @@ class CompressionBenchmark:
         tensor_size: int,
         error_bound: float,
         encoding_mode: str = "plain",
-        num_iterations: int = 50
+        num_iterations: int = 50,
+        real_kv_path: str = None
     ) -> dict:
         """
         Benchmark compression performance
@@ -58,12 +59,24 @@ class CompressionBenchmark:
             error_bound: Error bound
             encoding_mode: Encoding mode
             num_iterations: Number of iterations
+            real_kv_path: Path to real KV cache tensor
             
         Returns:
             Dictionary of performance metrics
         """
         # Create test data
-        test_tensor = torch.randn(tensor_size, dtype=torch.float32, device=self.device)
+        if real_kv_path and os.path.exists(real_kv_path):
+            logger.info(f"Loading real KV Cache from {real_kv_path}")
+            real_tensor = torch.load(real_kv_path, weights_only=True).to(self.device).to(torch.float32)
+            # Repeat or slice to match tensor_size
+            if real_tensor.numel() >= tensor_size:
+                test_tensor = real_tensor[:tensor_size].contiguous()
+            else:
+                repeats = (tensor_size // real_tensor.numel()) + 1
+                test_tensor = real_tensor.repeat(repeats)[:tensor_size].contiguous()
+        else:
+            logger.info("Using random normally distributed tensor")
+            test_tensor = torch.randn(tensor_size, dtype=torch.float32, device=self.device)
         
         # Create compressor
         mode = self._parse_encoding_mode(encoding_mode)
@@ -90,31 +103,31 @@ class CompressionBenchmark:
         
         # Warm up
         for _ in range(5):
-            # 💡 Directly receive return values, no need for ctypes
-            success, compressed_buffer, actual_size = compressor.compress(test_tensor, compressed_buffer)
+            success, compressed_buffer, actual_size, actual_eb = compressor.compress(test_tensor, compressed_buffer)
             
             if success:
                 decompressed_tensor = torch.empty_like(test_tensor)
-                compressor.decompress(compressed_buffer, actual_size, decompressed_tensor)
+                compressor.decompress(compressed_buffer, actual_size, decompressed_tensor, actual_eb)
         torch.cuda.synchronize()
         
         # Measure compression time
         compression_times = []
         compressed_sizes = []
+        actual_eb_last = 0.0
         
         for _ in range(num_iterations):
             torch.cuda.synchronize()
             start = time.perf_counter()
             
-            # 💡 Use new API
-            success, compressed_buffer, actual_size = compressor.compress(test_tensor, compressed_buffer)
+            success, compressed_buffer, actual_size, actual_eb = compressor.compress(test_tensor, compressed_buffer)
             
             torch.cuda.synchronize()
             end = time.perf_counter()
             
             if success:
                 compression_times.append(end - start)
-                compressed_sizes.append(actual_size) # 💡 Directly use actual_size
+                compressed_sizes.append(actual_size)
+                actual_eb_last = actual_eb
         
         # Measure decompression time
         decompression_times = []
@@ -128,7 +141,7 @@ class CompressionBenchmark:
                 torch.cuda.synchronize()
                 start = time.perf_counter()
                 
-                compressor.decompress(compressed_buffer, actual_size, decompressed_tensor)
+                compressor.decompress(compressed_buffer, actual_size, decompressed_tensor, actual_eb_last)
                 
                 torch.cuda.synchronize()
                 end = time.perf_counter()
@@ -148,7 +161,7 @@ class CompressionBenchmark:
         
         # Calculate error
         decompressed_tensor = torch.empty_like(test_tensor)
-        compressor.decompress(compressed_buffer, int(avg_compressed_size), decompressed_tensor)
+        compressor.decompress(compressed_buffer, int(avg_compressed_size), decompressed_tensor, actual_eb_last)
         
         abs_errors = torch.abs(test_tensor - decompressed_tensor)
         max_error = torch.max(abs_errors).item()
@@ -193,7 +206,8 @@ class CompressionBenchmark:
         self,
         tensor_size: int,
         error_bounds: list,
-        encoding_mode: str = "plain"
+        encoding_mode: str = "plain",
+        real_kv_path: str = None
     ):
         """Scan performance with different error bounds"""
         results = []
@@ -205,7 +219,8 @@ class CompressionBenchmark:
                 tensor_size=tensor_size,
                 error_bound=eb,
                 encoding_mode=encoding_mode,
-                num_iterations=20  # Reduce iterations for scanning
+                num_iterations=20,  # Reduce iterations for scanning
+                real_kv_path=real_kv_path
             )
             results.append(res)
             
@@ -221,6 +236,7 @@ def main():
                        choices=["fixed", "plain", "outlier"], help="Encoding mode")
     parser.add_argument("--iterations", type=int, default=50, help="Number of iterations")
     parser.add_argument("--scan-eb", action="store_true", help="Scan different error bounds")
+    parser.add_argument("--use-real-kv", type=str, default=None, help="Path to real KV cache .pt file. e.g. data/real_kv_cache.pt")
     parser.add_argument("--output", type=str, default="compression_results.json", help="Output file")
     
     args = parser.parse_args()
@@ -235,7 +251,7 @@ def main():
         # Scan error bounds
         ebs = [1e-2, 1e-3, 1e-4, 1e-5]
         results = benchmark.scan_error_bounds(
-            args.tensor_size, ebs, args.encoding_mode
+            args.tensor_size, ebs, args.encoding_mode, args.use_real_kv
         )
     else:
         # Single test
@@ -243,7 +259,8 @@ def main():
             args.tensor_size, 
             args.error_bound, 
             args.encoding_mode, 
-            args.iterations
+            args.iterations,
+            args.use_real_kv
         )
         results = [res]
         

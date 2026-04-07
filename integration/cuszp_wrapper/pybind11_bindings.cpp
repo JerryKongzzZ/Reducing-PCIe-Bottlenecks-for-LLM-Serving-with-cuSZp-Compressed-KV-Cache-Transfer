@@ -48,27 +48,29 @@ PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
         .def("compress", 
              [](CuSZpWrapper& self, torch::Tensor input_tensor, torch::Tensor compressed_buffer) {
                  size_t compressed_size = 0;
+                 float actual_error_bound = 0.0f;
                  // Automatically get the CUDA stream currently used by PyTorch to synchronize with vLLM
                  cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();
                  
                  // Call the actual C++ method
-                 bool success = self.compress(input_tensor, compressed_buffer, compressed_size, stream);
+                 bool success = self.compress(input_tensor, compressed_buffer, compressed_size, actual_error_bound, stream);
                  
-                 // Return Tuple to Python: (success flag, potentially reallocated buffer, actual compressed size)
-                 return py::make_tuple(success, compressed_buffer, compressed_size);
+                 // Return Tuple to Python: (success flag, potentially reallocated buffer, actual compressed size, actual error bound)
+                 return py::make_tuple(success, compressed_buffer, compressed_size, actual_error_bound);
              },
              py::arg("input_tensor"),
              py::arg("compressed_buffer"))
              
         .def("decompress",
-             [](CuSZpWrapper& self, torch::Tensor compressed_buffer, size_t compressed_size, torch::Tensor output_tensor) {
+             [](CuSZpWrapper& self, torch::Tensor compressed_buffer, size_t compressed_size, torch::Tensor output_tensor, float actual_error_bound) {
                  cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();
-                 bool success = self.decompress(compressed_buffer, compressed_size, output_tensor, stream);
+                 bool success = self.decompress(compressed_buffer, compressed_size, output_tensor, actual_error_bound, stream);
                  return success;
              },
              py::arg("compressed_buffer"),
              py::arg("compressed_size"),
-             py::arg("output_tensor"))
+             py::arg("output_tensor"),
+             py::arg("actual_error_bound"))
              
         .def_static("estimate_compressed_buffer_size", 
                     &CuSZpWrapper::estimate_compressed_buffer_size)

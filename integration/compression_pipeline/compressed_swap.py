@@ -137,7 +137,7 @@ class CompressedCacheEngineMonkeyPatch:
                 )
                 
                 # Compress
-                success, compressed_buffer, actual_size = self.compressor.compressor.compress(
+                success, compressed_buffer, actual_size, actual_eb = self.compressor.compressor.compress(
                     _src_cache,
                     compressed_buffer
                 )
@@ -158,7 +158,8 @@ class CompressedCacheEngineMonkeyPatch:
                 self.compressed_blocks_store[store_key] = {
                     'data': cpu_compressed,
                     'original_size': _src_cache.numel(),
-                    'shape': _src_cache.shape
+                    'shape': _src_cache.shape,
+                    'actual_eb': actual_eb
                 }
                 
                 # Update statistics
@@ -192,7 +193,8 @@ class CompressedCacheEngineMonkeyPatch:
                     success = self.compressor.compressor.decompress(
                         compressed_gpu,
                         len(compressed_gpu),  # Compressed size
-                        _dst_cache
+                        _dst_cache,
+                        block_info['actual_eb'] # Actual error bound
                     )
                     
                     if not success:

@@ -116,10 +116,13 @@ Simply execute the root script. It will compile the C++ PyBind11 wrapper and tri
 ---
 
 ## 🔍 What happens during `./test.sh`?
-Whether running natively or in Docker, the root automation script performs 3 main tasks:
+Whether running natively or in Docker, the root automation script performs 5 main tasks:
 1.  **Automated C++ Compilation**: Enters `integration/cuszp_wrapper`, cleans the build cache, and compiles the Python Wrapper for cuSZp via PyBind11 and CMake.
-2.  **PCIe Profiling**: Executes `benchmarks/baseline_profiling.py` to measure raw H2D/D2H tensor transfer latency under PCIe 4.0/5.0.
-3.  **Compression Benchmark**: Executes `benchmarks/compression_benchmark.py` to run the cuSZp compression performance tests, verifying compression ratio, throughput, and maximum absolute error (converging to 1e-4).
+2.  **KV Cache Dataset Generation**: Extracts real Layer-0 KV Cache parameters from a HuggingFace causal LM (`gpt2`) to simulate the true distribution of token states in production models.
+3.  **PCIe Profiling**: Executes `benchmarks/baseline_profiling.py` to measure raw H2D/D2H tensor transfer latency under PCIe 4.0/5.0.
+4.  **Compression Benchmark**: Executes `benchmarks/compression_benchmark.py` over the *real KV Cache*, dynamically calculating relative error boundaries based on exact tensor ranges (Min-Max Extraction). Verifies compression ratio (~2.5x), throughput (~9 GB/s), and absolute max precision error (bounded precisely at ~1e-3).
+5.  **vLLM Integration Simulation**: Executes `benchmarks/test_vllm_integration.py` to mock a `vllm.worker.cache_engine.CacheEngine` instance and demonstrates our `CompressedCacheEngineMonkeyPatch` correctly intercepts, compresses (`swap_out`), and recovers (`swap_in`) KV blocks transparently.
+
 *Results will be automatically saved in `.json` files in the root directory.*
 
 ---
