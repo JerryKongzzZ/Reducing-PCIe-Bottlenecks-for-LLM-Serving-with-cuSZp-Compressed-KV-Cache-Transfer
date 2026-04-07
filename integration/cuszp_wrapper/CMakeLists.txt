@@ -11,6 +11,8 @@ find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 find_package(pybind11 REQUIRED)
 # 👉 新增：查找 Torch 库
 find_package(Torch REQUIRED)
+# 👉 新增这一行：在 PyTorch 的安装目录下显式查找 torch_python 库
+find_library(TORCH_PYTHON_LIB torch_python PATHS "${TORCH_INSTALL_PREFIX}/lib")
 
 # 查找cuSZp
 # 假设cuSZp安装在 ../cuSZp/install
@@ -58,7 +60,7 @@ target_link_libraries(cuszp_wrapper_cpp PRIVATE
     ${CUDA_LIBRARIES}
     ${CUDA_CUDART_LIBRARY}
     ${TORCH_LIBRARIES}
-    torch_python
+    ${TORCH_PYTHON_LIB}    # 👉 修改这里：使用绝对路径变量
 )
 
 # 编译选项
