@@ -74,3 +74,4 @@ PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
                     &CuSZpWrapper::estimate_compressed_buffer_size)
         .def("get_config", &CuSZpWrapper::get_config)
         .def("update_config", &CuSZpWrapper::update_config);
+}
