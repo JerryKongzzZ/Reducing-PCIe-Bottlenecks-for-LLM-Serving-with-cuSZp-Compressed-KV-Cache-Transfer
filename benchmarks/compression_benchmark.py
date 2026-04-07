@@ -19,14 +19,21 @@ import ctypes
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import sys
+import os
+# 将编译好的扩展目录加入到系统路径中
+# 假设脚本在 benchmarks/ 目录下，扩展在 integration/compression_pipeline/ 目录下
+current_dir = os.path.dirname(os.path.abspath(__file__))
+extension_dir = os.path.join(current_dir, '../integration/compression_pipeline')
+sys.path.append(extension_dir)
+
 # 尝试导入cuSZp包装器
 try:
     import cuszp_wrapper_cpp
     CUSZP_AVAILABLE = True
-except ImportError:
-    logger.warning("cuSZp wrapper not available. Please compile it first.")
+except ImportError as e:
+    logger.warning(f"cuSZp wrapper not available. Error: {e}")
     CUSZP_AVAILABLE = False
-
 
 class CompressionBenchmark:
     """压缩性能基准测试"""
