@@ -1,7 +1,7 @@
 # Dockerfile for vLLM with cuSZp integration
 # 这个Dockerfile用于在支持CUDA的环境中构建和运行项目
 
-FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
+FROM docker.io/nvidia/cuda:12.1.1-devel-ubuntu22.04
 
 # 设置环境变量
 ENV DEBIAN_FRONTEND=noninteractive
