@@ -39,4 +39,10 @@ for MODEL in "${MODELS[@]}"; do
         --output "data/${SAFE_NAME}_results.json"
 done
 
+echo "=========================================="
+echo "📈 Summarizing Results..."
+echo "=========================================="
+python3 benchmarks/data_summarize.py > data/benchmark_summary.md
+cat data/benchmark_summary.md
+
 echo "✅ All experiments completed! Results saved to data/"
