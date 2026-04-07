@@ -27,16 +27,7 @@ PolyU_COMP_Final_Year_Project_2026_Spring/
 ### 1. Hardware Requirement
 * **NVIDIA GPU** with CUDA support is required for the compression kernels.
 
-### 2. Mandatory Platform Commands
-Before doing anything, you must grant execution permissions to the scripts using `sudo`.
-
-```bash
-# Grant permissions to the root and docker scripts
-sudo chmod +x run.sh
-sudo chmod +x docker/run.sh
-```
-
-### 3. Platform-Specific Setup
+### 2. Platform-Specific Setup
 | Platform | Requirement |
 | :--- | :--- |
 | **Linux (Ubuntu)** | Install NVIDIA Drivers and [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). |
