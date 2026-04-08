@@ -26,7 +26,6 @@
 
 % Global spacing/alignment/pagination
 \onehalfspacing
-\raggedright
 \pagestyle{plain}
 \makeatletter
 \renewcommand{\ps@plain}{%
@@ -98,25 +97,3 @@
 
   \end{titlepage}%
 }
-
-% -------------------- Bibliography formatting --------------------
-\makeatletter
-\renewenvironment{thebibliography}[1]{%
-  \chapter*{\bibname}%
-  \vspace{1em}%
-  \begingroup
-  \setlength{\parskip}{1em}%
-  \setlength{\parindent}{0pt}%
-  \list{\@biblabel{\@arabic\c@enumiv}}{%
-    \usecounter{enumiv}%
-    \setlength{\labelwidth}{1.5em}%
-    \setlength{\labelsep}{0.5em}%
-    \setlength{\leftmargin}{\dimexpr\labelwidth+\labelsep\relax}%
-    \setlength{\itemindent}{0pt}%
-  }%
-  \sloppy
-}{%
-  \endlist
-  \endgroup
-}
-\makeatother
