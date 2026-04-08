@@ -10,21 +10,20 @@ I integrate the **cuSZp** error-bounded lossy compression framework into the **v
 ```text
 PolyU_COMP_Final_Year_Project_2026_Spring/
 ├── benchmarks/               # Performance profiling and experimental scripts (Python)
-│   ├── baseline_profiling.py         # PCIe 4.0/5.0 H2D/D2H profiling
-│   ├── compression_benchmark.py      # cuSZp compression ratio/error benchmark
-│   ├── data_summarize.py             # Script to aggregate 8-model experiment results into Markdown
-│   ├── generate_real_kv_cache.py     # Real KV cache extraction via HF Transformers
-│   ├── run_experiments.sh            # Run comprehensive benchmark across 8 models
-│   └── test_vllm_integration.py      # Mock CacheEngine monkey patch validation
+│   ├── benchmark_pipeline.py         # Unified benchmark pipeline for testing compression performance across multiple models
+│   └── test_vllm_integration.py      # Mock CacheEngine monkey patch validation to test cuSZp integration with vLLM
 ├── data/                     # Output directory for `.pt` tensor caches and `.json` benchmark results
 ├── docker/                   # Docker infrastructure (Dockerfile, run.sh)
 ├── final_report/             # Final FYP thesis (PDF)
 ├── integration/              # Core source code (C++/Python bindings)
 │   ├── compression_pipeline/         # Python hook for vLLM (compressed_swap.py)
 │   └── cuszp_wrapper/                # cuSZp PyBind11 C++ Wrapper
+├── interim_report/           # FYP Interim Report (PDF)
+├── project_proposal/         # FYP Proposal (PDF)
 ├── requirements.txt          # Python dependencies
-├── test.sh                   # 🚀 Root Automation Script (Builds & Tests)
-└── README.md                 # This comprehensive guide
+├── test.sh                   # Root Automation Script (Builds & Tests)
+├── integrated_validation.py  # Unified script for benchmarks and vLLM integration tests
+└── README.md                 # This project guide
 ```
 
 ---
@@ -79,6 +78,10 @@ If you need to manually debug or develop code inside the isolated environment, u
 ---
 
 ### Option B: Run Natively (Linux / WSL2)
+
+[!CAUTION]
+Warning: This method requires a perfectly configured C++ development environment. If you do not have cmake (version 3.18+), gcc/g++ (11+), and the CUDA Toolkit correctly set in your $PATH, the compilation will fail. If you encounter environment errors, please use the Docker method above.
+
 If you are developing actively, you might want to run natively to utilize your host IDE's code completion (e.g., VS Code Pylance/C++ Intellisense) and avoid Docker overhead.
 
 **0. Install System Dependencies**
@@ -126,12 +129,8 @@ Simply execute the root script. It will compile the C++ PyBind11 wrapper and tri
 
 To prove our `cuSZp` KV cache swapping wrapper performs exceptionally without cherry-picking random noise data, we automatically dump and slice the true Layer-0 key embeddings directly from 8 state-of-the-art causal language models using HuggingFace. 
 
-### 1. Hardware Baseline (Raw PCIe Transfer)
-- **PCIe Device-to-Host (Swap OUT) Bandwidth:** `3.08 GB/s`
-- **PCIe Host-to-Device (Swap IN) Bandwidth:** `19.06 GB/s`
-
-### 2. Upgraded Effective Performance (Compression + Transfer + Decompression)
-By integrating our `compress_swap` mechanism, the end-to-end effective bandwidths (including compression overhead) are compared below. With an absolute error boundary target configured at `1e-4`, it achieves the following metrics on an RTX 5080 when swapping 1M contiguous block elements:
+### Compression Metrics vs Baseline
+By integrating our `compress_swap` mechanism, the end-to-end effective bandwidths (including compression overhead) are compared below against their respective raw baseline transfer speeds. With an absolute error boundary target configured at `1e-4`, it achieves the following metrics on an RTX 5080 when swapping contiguous block elements:
 
 | Model | Compression Ratio | Absolute Max Error | Baseline Swap-Out | Effective Swap-Out | Out Speedup | Baseline Swap-In | Effective Swap-In | In Speedup |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -144,17 +143,17 @@ By integrating our `compress_swap` mechanism, the end-to-end effective bandwidth
 | **Qwen/Qwen2.5-1.5B** | `3.06x` | `6.08e-02` | 3.08 GB/s | **6.48 GB/s** | **2.11x** | 19.06 GB/s | **19.92 GB/s** | **1.05x** |
 | **TinyLlama-1.1B** | `2.85x` | `2.04e-03` | 3.08 GB/s | **6.22 GB/s** | **2.02x** | 19.06 GB/s | **20.52 GB/s** | **1.08x** |
 
+*Note: Once you run `./test.sh` locally, this table's baseline numbers will be automatically updated with the exact values for each specific model's cache tensor.*
+
 *Results automatically recorded in the latest `./data` output artifacts.*
 
 ---
 
 ## 🔍 What happens during `./test.sh`?
-Whether running natively or in Docker, the root automation script performs 5 main tasks:
+Whether running natively or in Docker, the root automation script performs 3 main tasks:
 1.  **Automated C++ Compilation**: Enters `integration/cuszp_wrapper`, cleans the build cache, and compiles the Python Wrapper for cuSZp via PyBind11 and CMake.
-2.  **KV Cache Dataset Generation**: Extracts real Layer-0 KV Cache parameters from a HuggingFace causal LM (`gpt2`) to simulate the true distribution of token states in production models.
-3.  **PCIe Profiling**: Executes `benchmarks/baseline_profiling.py` to measure raw H2D/D2H tensor transfer latency under PCIe 4.0/5.0.
-4.  **Compression Benchmark**: Executes `benchmarks/compression_benchmark.py` over the *real KV Cache*, dynamically calculating relative error boundaries based on exact tensor ranges (Min-Max Extraction). Verifies compression ratio (~2.5x), throughput (~9 GB/s), and absolute max precision error (bounded precisely at ~1e-3).
-5.  **vLLM Integration Simulation**: Executes `benchmarks/test_vllm_integration.py` to mock a `vllm.worker.cache_engine.CacheEngine` instance and demonstrates our `CompressedCacheEngineMonkeyPatch` correctly intercepts, compresses (`swap_out`), and recovers (`swap_in`) KV blocks transparently.
+2.  **Unified Benchmark Pipeline**: Executes `benchmarks/benchmark_pipeline.py`. For each of the 8 models, it automatically generates real KV cache tensors, profiles the baseline PCIe H2D/D2H transfer latency, executes the cuSZp compression + transfer simulation, calculates effective speedups, and produces a single unified summary in Markdown.
+3.  **vLLM Integration Simulation**: Executes `benchmarks/test_vllm_integration.py` to mock a `vllm.worker.cache_engine.CacheEngine` instance and demonstrates our `CompressedCacheEngineMonkeyPatch` correctly intercepts, compresses (`swap_out`), and recovers (`swap_in`) KV blocks transparently.
 
 *Results will be automatically saved in `.json` files in the root directory.*
 
