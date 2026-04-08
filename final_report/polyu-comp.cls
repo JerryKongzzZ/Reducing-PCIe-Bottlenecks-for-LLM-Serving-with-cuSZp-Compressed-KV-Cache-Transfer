@@ -57,43 +57,41 @@
 
 % -------------------- Cover Page Layout --------------------
 \newcommand{\printCompCover}{%
-  \begin{titlepage}
-    \thispagestyle{empty}
-    \centering
-
-    % 1. University Header
-    {\bfseries\fontsize{18pt}{22pt}\selectfont \CompPolyU\par}
-
-    % 2. Course and Report Type
-    \vspace{1cm}
-    {\fontsize{18pt}{22pt}\selectfont 
-     \underline{\CompCode}\par
-     \vspace{-0.5cm}
-     \CompReportType\par
-    }
-
-    % 3. Project Title
-    \vspace{2cm}
-    {\bfseries\fontsize{24pt}{28pt}\selectfont \CompTitle\par}
-
-    % 4. Student Details Table
-    % We use vfill to push this section down, but keep some space at bottom
-    \vfill 
+    {
+      \thispagestyle{empty}
+      \centering
     
-    % The table is left aligned relative to the page margins
-    \begin{flushleft}
-    \fontsize{14pt}{18pt}\selectfont
-    \renewcommand{\arraystretch}{1.8} % Increases vertical space between rows
-    \begin{tabular}{@{}p{6cm} l}
-        Student Name: & \CompStudentName \\
-        Student ID No.: & \CompStudentID \\
-        Programme-Stream Code: & \CompStreamCode \\
-        Supervisor: & \CompStudentSupervisor \\
-        Co-Examiner: & \CompCoExaminer \\
-        2\textsuperscript{nd} Assessor: & \CompAssessor \\
-        Submission Date: & \CompSubmissionDate \\
-    \end{tabular}
-    \end{flushleft}
-
-  \end{titlepage}%
+      % 1. University Header
+      {\bfseries\fontsize{18pt}{22pt}\selectfont \CompPolyU\par}
+    
+      % 2. Course and Report Type
+      \vspace{1cm}
+      {\fontsize{18pt}{22pt}\selectfont 
+       \underline{\CompCode}\par
+       \vspace{-0.5cm}
+       \CompReportType\par
+      }
+    
+      % 3. Project Title
+      \vspace{2cm}
+      {\bfseries\fontsize{24pt}{28pt}\selectfont \CompTitle\par}
+    
+      % 4. Student Details Table
+      \vfill 
+      
+      \begin{flushleft}
+      \fontsize{14pt}{18pt}\selectfont
+      \renewcommand{\arraystretch}{1.8} 
+      \begin{tabular}{@{}p{6cm} l}
+          Student Name: & \CompStudentName \\
+          Student ID No.: & \CompStudentID \\
+          Programme-Stream Code: & \CompStreamCode \\
+          Supervisor: & \CompStudentSupervisor \\
+          Co-Examiner: & \CompCoExaminer \\
+          2\textsuperscript{nd} Assessor: & \CompAssessor \\
+          Submission Date: & \CompSubmissionDate \\
+      \end{tabular}
+      \end{flushleft}
+      \clearpage % 确保封面结束后分页
+    }
 }

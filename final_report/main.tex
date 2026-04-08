@@ -5,6 +5,8 @@
 \usepackage{graphicx}
 \usepackage{algorithm}
 \usepackage{algorithmic}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, calc}
 \usepackage[absolute]{textpos}
 \usepackage{listings}
 \usepackage{xcolor}
@@ -52,34 +54,36 @@
 % Cover page
 \printCompCover
 
-% 恢复全局的右上角页码样式（在 polyu-comp.cls 中已经定义了 plain）
-\pagestyle{plain} 
-
 % Abstract
 \clearpage
 \section*{Abstract}
 \addcontentsline{toc}{section}{Abstract}
-The rapid scaling of Large Language Models (LLMs) has led to unprecedented context window lengths, significantly exacerbating the memory footprint of the Key-Value (KV) cache during inference. To manage limited GPU VRAM and prevent Out-Of-Memory errors, modern inference engines like vLLM\cite{kwon2023efficient} dynamically offload inactive KV cache blocks to CPU RAM and restore them when needed. However, the physical CPU-GPU PCIe bandwidth introduces a severe latency bottleneck during these swap-in and swap-out operations, severely degrading overall inference throughput.
+The rapid scaling of Large Language Models (LLMs) has led to unprecedented context window lengths, significantly exacerbating the memory footprint of the Key-Value (KV) cache during inference. To manage limited GPU VRAM and prevent Out-Of-Memory errors, modern inference engines like vLLM dynamically offload inactive KV cache blocks to CPU RAM and restore them when needed. However, the physical CPU-GPU PCIe bandwidth introduces a severe latency bottleneck during these swap-in and swap-out operations, severely degrading overall inference throughput.
 
-To address this memory wall, this project introduces a novel "Compress-Transfer-Decompress" data pipeline that integrates cuSZp\cite{huang2023cuszp}, an ultra-fast, GPU-accelerated error-bounded lossy compression framework, into the vLLM serving engine. We developed a high-performance C++ wrapper using PyBind11 to seamlessly bridge native CUDA compression APIs with vLLM's Python-based CacheEngine. By leveraging monkey-patching techniques, the system transparently intercepts, compresses KV cache tensors on the GPU prior to PCIe transmission, and decompresses them upon retrieval, drastically reducing the physical data volume transferred over the bus.
+To address this memory wall, this project introduces a novel ``Compress-Transfer-Decompress'' data pipeline that integrates cuSZp, an ultra-fast, GPU-accelerated error-bounded lossy compression framework, into the vLLM serving engine. We developed a high-performance C++ wrapper using PyBind11 to seamlessly bridge native CUDA compression APIs with vLLM's Python-based CacheEngine. By leveraging monkey-patching techniques, the system transparently intercepts, compresses KV cache tensors on the GPU prior to PCIe transmission, and decompresses them upon retrieval, drastically reducing the physical data volume transferred over the bus.
 
 Comprehensive benchmarking was conducted on high-bandwidth hardware (NVIDIA RTX 5080) utilizing true Layer-0 key embeddings extracted from 8 state-of-the-art causal language models, including GPT-2, Qwen2.5, OPT, Pythia, and TinyLlama. Operating under a strict absolute error bound of 1e-4 to preserve generation quality, the cuSZp-enabled pipeline achieved compression ratios ranging from 2.42$\times$ to 3.06$\times$. The system effectively absorbed the computational overhead of compression, yielding end-to-end effective bandwidth speedups of up to 1.77$\times$ for Swap-Out operations and 2.08$\times$ for Swap-In operations compared to uncompressed baselines. This project successfully demonstrates the viability and substantial performance benefits of integrating error-bounded lossy tensor compression to alleviate hardware bottlenecks in large-scale LLM serving.
 
 % Table of Contents
 \clearpage
+\addcontentsline{toc}{section}{Contents}
 \tableofcontents
 
-% List of Tables and Figures (补充这一部分)
+% List of Tables and Figures
 \clearpage
+\addcontentsline{toc}{section}{List of Tables}
 \listoftables
-% \listoffigures % 如果你的最终版里加入了图表，请取消这行的注释
+
+\clearpage
+\addcontentsline{toc}{section}{List of Figures}
+\listoffigures
 
 % 正文开始
-\clearpage
+
 \section{Introduction}
 
 \subsection{Motivation}
-In recent years, Large Language Models (LLMs) have demonstrated unprecedented capabilities across a wide range of natural language processing tasks. As the demand for analyzing and generating longer documents grows, modern LLMs are engineered to support increasingly massive context windows. However, this capability introduces a severe memory challenge during autoregressive inference. Specifically, the Key-Value (KV) cache---which stores intermediate tensor representations of previous tokens to avoid redundant recomputations---grows linearly with sequence length and batch size. To accommodate requests that exceed the limited GPU Video RAM (VRAM) capacity, state-of-the-art serving engines like vLLM employ memory management techniques such as PagedAttention, dynamically offloading inactive KV cache blocks to the host CPU RAM and restoring them when required. While highly effective in preventing Out-Of-Memory (OOM) failures, this offloading paradigm exposes a critical hardware limitation that must be addressed to maintain high-throughput, long-context generation.
+In recent years, Large Language Models (LLMs) have demonstrated unprecedented capabilities across a wide range of natural language processing tasks. As the demand for analyzing and generating longer documents grows, modern LLMs are engineered to support increasingly massive context windows. However, this capability introduces a severe memory challenge during autoregressive inference. Specifically, the Key-Value (KV) cache---which stores intermediate tensor representations of previous tokens to avoid redundant recomputations---grows linearly with sequence length and batch size. To accommodate requests that exceed the limited Graphics Processing Unit (GPU) Video Random Access Memory (VRAM) capacity, state-of-the-art serving engines like vLLM \cite{kwon2023efficient} employ memory management techniques such as PagedAttention, dynamically offloading inactive KV cache blocks to the host Central Processing Unit (CPU) RAM and restoring them when required. While highly effective in preventing Out-Of-Memory \cite{10.1145/3458817.3476205} (OOM) failures, this offloading paradigm exposes a critical hardware limitation that must be addressed to maintain high-throughput, long-context generation.
 
 \subsection{Problem Statement}
 The primary bottleneck in dynamic KV cache swapping lies in the physical Peripheral Component Interconnect Express (PCIe) bus that bridges the CPU and GPU. Because the PCIe bandwidth is orders of magnitude lower than the internal GPU High Bandwidth Memory (HBM), transferring massive, uncompressed multi-dimensional tensor data between GPU VRAM and CPU RAM incurs substantial latency. This communication overhead significantly stalls the GPU compute pipeline, degrading the overall inference throughput. Consequently, without optimizing the data transfer payload itself, the theoretical scalability benefits of dynamic KV cache offloading are heavily compromised by the PCIe bandwidth wall.
@@ -92,11 +96,11 @@ To mitigate the aforementioned data transfer bottleneck, this project aims to de
 \end{itemize}
 
 \subsection{Key Contributions}
-To fulfill these objectives, this project leverages \textbf{cuSZp}, a highly optimized, GPU-accelerated error-bounded lossy compression framework. The key contributions of this thesis are as follows:
+To fulfill these objectives, this project leverages \textbf{cuSZp} \cite{huang2023cuszp}, a highly optimized, GPU-accelerated error-bounded lossy compression framework. The key contributions of this thesis are as follows:
 \begin{itemize}
-    \item \textbf{Custom PyBind11 Wrapper for cuSZp:} Designed and compiled a robust C++ wrapper via PyBind11, exposing the native CUDA-accelerated cuSZp compression and decompression APIs directly to Python with minimal invocation overhead.
-    \item \textbf{Implementation of Compressed Swap Logic in vLLM:} Developed an integration pipeline utilizing monkey-patching techniques to transparently intercept and override vLLM's native \texttt{swap\_in} and \texttt{swap\_out} tensor block operations with the Compress-Transfer-Decompress mechanism.
-    \item \textbf{Comprehensive Automated Benchmark Suite:} Created an automated profiling pipeline that slices true Layer-0 key embeddings to evaluate the system's performance. The solution was rigorously validated across 8 state-of-the-art architectures---including GPT-2, Qwen2.5, OPT, Pythia, and TinyLlama---demonstrating substantial effective bandwidth speedups.
+    \item \textbf{Custom PyBind11 \cite{RODRIGUEZ_LUZARDO_2022} Wrapper for cuSZp:} Designed and compiled a robust C++ wrapper via PyBind11, exposing the GPU-native cuSZp compression and decompression Application Programming Interfaces (APIs) directly to Python with minimal invocation overhead.
+    \item \textbf{Implementation of Compressed Swap Logic in vLLM:} Developed an integration pipeline utilizing monkey-patching \cite{Hunt2023} techniques to transparently intercept and override vLLM's native \texttt{swap\_in} and \texttt{swap\_out} tensor block operations with the Compress-Transfer-Decompress mechanism.
+    \item \textbf{Comprehensive Automated Benchmark Suite:} Created an automated profiling pipeline that slices true Layer-0 \cite{zhang-etal-2024-investigating} key embeddings to evaluate the system's performance. The solution was rigorously validated across 8 state-of-the-art architectures---including GPT-2 \cite{radford2019language}, Qwen2.5 \cite{qwen2.5}, OPT \cite{zhang2022optopenpretrainedtransformer}, Pythia \cite{biderman2023pythia}, and TinyLlama \cite{zhang2024tinyllama}---demonstrating substantial effective bandwidth speedups.
 \end{itemize}
 
 \subsection{Thesis Organization}
@@ -108,18 +112,18 @@ The remainder of this thesis is structured as follows. \textbf{Chapter 2} review
 \subsection{LLM Serving and the KV Cache}
 
 \subsubsection{Autoregressive Generation and the KV Cache}
-Large Language Models (LLMs), such as models based on the Transformer architecture, generate text in an autoregressive manner. This means that predicting the next token requires the model to process all preceding tokens in the sequence. During inference, specifically the decoding phase, computing the attention scores for a new token requires the Key (K) and Value (V) tensors of all previously generated tokens. Recalculating these tensors at every generation step is computationally prohibitive. To optimize this, inference engines employ a mechanism known as the \textit{KV Cache}. By storing the K and V tensors in memory after they are first computed, the model can reuse them in subsequent steps, thereby trading memory capacity for significant computational speedups. However, as context windows expand and batch sizes increase, the KV Cache footprint grows linearly, quickly becoming the primary memory consumer during LLM serving.
+LLMs, such as models based on the Transformer architecture, generate text in an autoregressive manner. This means that predicting the next token requires the model to process all preceding tokens in the sequence. During inference, specifically the decoding phase, computing the attention scores for a new token requires the K and V tensors of all previously generated tokens. Recalculating these tensors at every generation step is computationally prohibitive. To optimize this, inference engines employ a mechanism known as the \textit{KV Cache}. By storing the K and V tensors in memory after they are first computed, the model can reuse them in subsequent steps, thereby trading memory capacity for significant computational speedups. However, as context windows expand and batch sizes increase, the KV Cache footprint grows linearly, quickly becoming the primary memory consumer during LLM serving.
 
 \subsubsection{vLLM and PagedAttention}
-To manage the massive and dynamic memory requirements of the KV Cache, the \textbf{vLLM} engine introduced \textit{PagedAttention}. Inspired by virtual memory and paging in operating systems, PagedAttention partitions the continuous KV Cache into fixed-size, non-contiguous blocks. This approach eliminates external memory fragmentation and allows for efficient memory sharing. When the GPU VRAM is exhausted due to incoming requests or long sequence generation, vLLM's \texttt{CacheEngine} automatically intervenes. It frees up VRAM by preempting lower-priority requests and offloading (swapping out) their associated KV blocks to the host CPU RAM. Once the GPU has sufficient resources to resume the preempted request, the \texttt{CacheEngine} restores (swaps in) these blocks back to the VRAM. While this swapping mechanism prevents Out-Of-Memory (OOM) errors, it introduces severe latency overheads dependent on hardware data transfer rates.
+To manage the massive and dynamic memory requirements of the KV Cache, the \textbf{vLLM} engine introduced \textit{PagedAttention}. Inspired by virtual memory and paging in operating systems, PagedAttention partitions the continuous KV Cache into fixed-size, non-contiguous blocks. This approach eliminates external memory fragmentation and allows for efficient memory sharing. When the GPU VRAM is exhausted due to incoming requests or long sequence generation, vLLM's \texttt{CacheEngine} automatically intervenes. It frees up VRAM by preempting lower-priority requests and offloading (swapping out) their associated KV blocks to the host CPU RAM. Once the GPU has sufficient resources to resume the preempted request, the \texttt{CacheEngine} restores (swaps in) these blocks back to the VRAM. While this swapping mechanism prevents OOM errors, it introduces severe latency overheads dependent on hardware data transfer rates.
 
 \subsection{Memory Bottlenecks in GPU Computing}
 In modern heterogeneous computing systems, the performance of data-intensive operations is largely dictated by memory bandwidth. There exists a stark discrepancy between the internal bandwidth of the GPU and the interconnect bandwidth linking the GPU to the host CPU:
 \begin{itemize}
     \item \textbf{GPU VRAM Bandwidth:} High-end GPUs are equipped with High Bandwidth Memory (HBM) or ultra-fast GDDR memory (e.g., GDDR7 on the RTX 5080), capable of internal data transfer rates exceeding $1,000\text{ GB/s}$.
-    \item \textbf{CPU-GPU PCIe Bandwidth:} In contrast, data transfers between the host CPU memory and GPU VRAM must traverse the Peripheral Component Interconnect Express (PCIe) bus. Even with modern PCIe Gen 4.0 x16 or Gen 5.0 connections, the theoretical bandwidth is capped between $32\text{ GB/s}$ and $64\text{ GB/s}$, with practical effective bandwidths often much lower.
+    \item \textbf{CPU-GPU PCIe Bandwidth:} In contrast, data transfers between the host CPU memory and GPU VRAM must traverse the Peripheral Component Interconnect Express (PCIe) bus. Even with modern PCIe Gen 4.0 $\times$16 or Gen 5.0 connections, the theoretical bandwidth is capped between $32\text{ GB/s}$ and $64\text{ GB/s}$, with practical effective bandwidths often much lower.
 \end{itemize}
-During the dynamic offloading and restoring of KV caches in vLLM, gigabytes of uncompressed tensor data must traverse this narrow PCIe corridor. This bandwidth discrepancy creates a ``Memory Wall,'' where the GPU compute units remain idle, waiting for data to arrive from the CPU, thereby bottlenecking the overall inference throughput of the LLM.
+During the dynamic offloading and restoring of KV caches in vLLM, gigabytes of uncompressed tensor data must traverse this narrow PCIe corridor. This bandwidth discrepancy creates a ``Memory Wall'', where the GPU compute units remain idle, waiting for data to arrive from the CPU, thereby bottlenecking the overall inference throughput of the LLM.
 
 \subsection{Data Compression for Tensors}
 To alleviate the PCIe bandwidth bottleneck, data compression can be applied to reduce the data payload before transmission. Compression techniques for neural network activations and tensors generally fall into two categories:
@@ -135,7 +139,7 @@ To balance high compression ratios with strict quality control, \textit{Error-Bo
 \subsection{Introduction to cuSZp}
 For this project, the \textbf{cuSZp} framework was selected as the underlying compression engine. cuSZp is an ultra-fast, GPU-accelerated error-bounded lossy compressor designed specifically for floating-point data arrays. Several key factors motivated its selection:
 \begin{itemize}
-    \item \textbf{GPU-Accelerated Parallel Execution:} Unlike CPU-based compressors, cuSZp is implemented in native CUDA, allowing it to leverage thousands of GPU cores. This parallelization ensures that the time spent compressing the data does not outweigh the time saved during the PCIe transfer.
+    \item \textbf{GPU-Accelerated Parallel Execution:} Unlike CPU-based compressors, cuSZp is implemented in native Compute Unified Device Architecture (CUDA), allowing it to leverage thousands of GPU cores. This parallelization ensures that the time spent compressing the data does not outweigh the time saved during the PCIe transfer.
     \item \textbf{High Throughput:} cuSZp focuses on high-speed encoding and decoding rather than chasing maximal compression ratios. This philosophy perfectly aligns with the latency-sensitive nature of real-time LLM serving. 
     \item \textbf{Precise Error Control:} cuSZp strictly respects user-defined absolute or relative error bounds, ensuring the integrity of the KV cache is preserved to maintain the LLM's autoregressive generation quality.
 \end{itemize}
@@ -157,8 +161,32 @@ Since vLLM's native \texttt{BlockSpaceManager} assumes fixed-size blocks (e.g., 
 \subsection{The Compress-Transfer-Decompress Paradigm}
 By overriding vLLM's memory operations, the system shifts from a direct physical transfer model to a \textit{Compress-Transfer-Decompress} paradigm to maximize PCIe throughput efficiency:
 
+\begin{algorithm}[htbp]
+\caption{Dynamic Error-Bounded Compressed Swap-Out Pipeline}
+\label{alg:swap_out}
+\begin{algorithmic}[1]
+\REQUIRE Uncompressed KV tensor $T_{gpu}$, Relative Error Bound $\epsilon_{rel}$, Target CPU indices $(L_{idx}, D_{idx})$
+\ENSURE Compressed bitstream $B_{cpu}$ stored in Host RAM with metadata
+\STATE $R \gets \max(T_{gpu}) - \min(T_{gpu})$ \COMMENT{Calculate range via CUDA reduction}
+\IF{$R < 10^{-6}$}
+    \STATE $R \gets 10^{-6}$ \COMMENT{Prevent precision collapse for near-constant tensors}
+\ENDIF
+\STATE $\epsilon_{abs} \gets \epsilon_{rel} \times R$ \COMMENT{Compute dynamic absolute error bound}
+\STATE $S_{est} \gets \text{EstimateBufferSize}(\text{sizeof}(T_{gpu}))$
+\STATE $B_{gpu} \gets \text{Allocate}(\text{uint8}, S_{est}, \text{device='cuda'})$
+\STATE $(Status, S_{actual}) \gets \text{cuSZp\_compress}(T_{gpu}, B_{gpu}, \epsilon_{abs})$
+\IF{$Status \neq \text{SUCCESS}$}
+    \RETURN $\text{OriginalUncompressedTransfer}(T_{gpu})$
+\ENDIF
+\STATE $B_{minimized} \gets B_{gpu}[0 : S_{actual}]$ \COMMENT{Slice to exact compressed byte length}
+\STATE $B_{cpu} \gets \text{AsyncTransferToHost}(B_{minimized})$
+\STATE $\text{MetadataStore}[(L_{idx}, D_{idx})] \gets \{ B_{cpu}, \text{shape}(T_{gpu}), \epsilon_{abs} \}$
+\RETURN $SUCCESS$
+\end{algorithmic}
+\end{algorithm}
+
 \begin{itemize}
-    \item \textbf{Swap-Out (GPU to CPU):} When the cache manager evicts KV blocks, the tensor data is compressed natively on the GPU using \texttt{cuSZp}. To safely capture the variable-length output, the C++ wrapper statically estimates a maximum buffer size (e.g., theoretically up to $2\times$ the original tensor size to accommodate adverse edge cases) and pre-allocates an uninitialized PyTorch tensor (\texttt{torch.empty}) of type \texttt{uint8} on the target GPU. It then invokes the compression kernel. Subsequently, the oversized GPU tensor is sliced to its exact compressed byte size using \texttt{[:actual\_size]}, and only this minimized byte array is transferred over the PCIe bus to the host CPU via a standard \texttt{.cpu()} call. This heavily reduces transfer latency. Finally, the compressed byte string and its metadata are cached in the \texttt{compressed\_blocks\_store}, while internal performance counters sequentially accumulate the original and compressed byte totals to monitor real-time compression ratios.
+    \item \textbf{Swap-Out (GPU to CPU):} As formalized in Algorithm \ref{alg:swap_out}, when the cache manager evicts KV blocks, the tensor data is compressed natively on the GPU using \texttt{cuSZp}. To safely capture the variable-length output, the C++ wrapper statically estimates a maximum buffer size (e.g., theoretically up to $2\times$ the original tensor size to accommodate adverse edge cases) and pre-allocates an uninitialized PyTorch tensor (\texttt{torch.empty}) of type \texttt{uint8} on the target GPU. It then invokes the compression kernel. Subsequently, the oversized GPU tensor is sliced to its exact compressed byte size using \texttt{[:actual\_size]}, and only this minimized byte array is transferred over the PCIe bus to the host CPU via a standard \texttt{.cpu()} call. This heavily reduces transfer latency. Finally, the compressed byte string and its metadata are cached in the \texttt{compressed\_blocks\_store}, while internal performance counters sequentially accumulate the original and compressed byte totals to monitor real-time compression ratios.
     
     \item \textbf{Swap-In (CPU to GPU):} During a swap-in request, the compressed byte array and the original layer specifications are retrieved from the host memory's dictionary using the block indices. The byte stream is transferred back to the GPU asynchronously using PyTorch's \texttt{tensor.cuda(non\_blocking=True)} to prevent stalling the main Python thread. The \texttt{cuSZp\_decompress} kernel is then executed directly on the GPU, requiring the specific \texttt{actual\_eb} metadata saved earlier to mathematically invert the compression array. This reconstructs the KV cache data precisely into the pre-allocated destination tensor (\texttt{\_dst\_cache}) natively within vLLM's active GPU cache space.
 \end{itemize}
@@ -195,7 +223,39 @@ The core compression logic is encapsulated in a highly optimized C++ wrapper loc
 \subsection{Python Interface and vLLM Monkey-Patching (\texttt{compression\_pipeline})}
 \label{subsec:python_interface}
 
-To inject the cuSZp compression mechanism into vLLM without permanently modifying the engine's core source code, a dynamic \textit{monkey-patching} strategy is deployed in the Python runtime.
+To inject the cuSZp compression mechanism into vLLM without permanently modifying the engine's core source code, a dynamic \textit{monkey-patching} strategy is deployed in the Python runtime. The overall architectural data flow orchestrated by the Python interface is illustrated in Figure \ref{fig:pipeline_diagram}.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.5cm and 2.5cm,
+        box/.style={rectangle, draw=black, thick, text width=3cm, align=center, minimum height=1.2cm, rounded corners},
+        db/.style={cylinder, draw=black, thick, aspect=0.25, text width=2.5cm, align=center, minimum height=1.5cm, shape border rotate=90},
+        arrow/.style={thick, ->, >=stealth}
+    ]
+    
+    % Nodes
+    \node[box, fill=red!10] (vram) {\textbf{GPU VRAM}\\(Uncompressed KV)};
+    \node[box, below=of vram] (compress) {\textbf{cuSZp}\\Compress Kernel};
+    \node[box, below=of compress, fill=red!10] (comp_gpu) {\textbf{GPU Buffer}\\(Compressed Bits)};
+    
+    \node[right=of comp_gpu, text width=2cm, align=center, font=\bfseries] (pcie) {PCIe Gen4\\Bottleneck};
+    
+    \node[box, right=of pcie, fill=blue!10] (comp_cpu) {\textbf{CPU RAM}\\(Compressed Bits)};
+    \node[db, above=of comp_cpu, fill=green!10] (dict) {\textbf{Metadata Dict}\\(\texttt{actual\_eb}, shape)};
+    
+    % Edges
+    \draw[arrow] (vram) -- node[right] {Swap-Out} (compress);
+    \draw[arrow] (compress) -- (comp_gpu);
+    \draw[arrow, dashed, ultra thick] (comp_gpu) -- node[above] {Device-to-Host} (comp_cpu);
+    \draw[arrow] (comp_cpu) -- node[right] {Store} (dict);
+    
+    \draw[arrow, dashed, ultra thick] (comp_cpu) to[bend left=45] node[below] {Host-to-Device (Swap-In)} (comp_gpu);
+    
+    \end{tikzpicture}
+    \caption{Architectural flowchart of the Compress-Transfer-Decompress paradigm. Massive uncompressed KV tensors are compressed locally on the GPU, transmitting only the minimized bitstream across the PCIe bottleneck. Critical reconstruction metadata is preserved within the host RAM dictionary.}
+    \label{fig:pipeline_diagram}
+\end{figure}
 
 \begin{itemize}
     \item \textbf{\texttt{compressed\_swap.py}:} This script acts as the critical bridge connecting vLLM to the compiled C++ backend. It introduces an intermediate \texttt{CuSZpCompressor} class to explicitly configure the C++ wrapper instance (including error tolerance limits, \texttt{DIM\_1D} shaping, and GPU device mapping). Concurrently, it exposes the \texttt{CompressedCacheEngineMonkeyPatch} class. This monkey-patch module programmatically intercepts and replaces the native \texttt{\_swap\_out\_blocks\_to\_host} and \texttt{\_swap\_in\_blocks\_from\_host} routines inside vLLM's \texttt{CacheEngine} memory controller during runtime initialization. During a swap-out, the patched function invokes the compressor to process the uncompressed GPU cache block, yielding a variable-length byte stream array. This exact byte bitstream is sliced to drop empty allocated space and transferred to the CPU, heavily reducing overall transmission time. The compressed byte payload is recorded within an auxiliary memory dictionary (\texttt{compressed\_blocks\_store}), safely cataloging vital decompression metadata such as the original layer indices, uncompressed structural shape, and the dynamically finalized absolute error bound (\texttt{actual\_eb}) specific to that precise tensor. During a swap-in request, the logic naturally reverses: the block byte stream is fetched via dictionary key lookup, transferred back to the GPU VRAM natively via a non-blocking asynchronous call (\texttt{tensor.cuda(non\_blocking=True)}), and accurately decompressed to restore the initial memory contents of the targeted vLLM cache block.
@@ -275,6 +335,46 @@ Table \ref{tab:benchmark_results} summarizes the end-to-end performance metrics 
     }
 \end{table}
 
+\subsection{Sensitivity Analysis of Error Bounds}
+\label{subsec:sensitivity_analysis}
+
+To deeply understand the trade-offs between generation quality preservation (controlled via the absolute maximum error) and the resulting hardware speedups, we performed a sensitivity analysis on the \textbf{GPT-2 (124M)} and \textbf{Qwen2.5-1.5B} architectures. By sweeping the relative error bound configuration ($\epsilon_{rel}$) from $10^{-2}$ to $10^{-5}$, we cataloged the distinct compression ratios, absolute maximum errors, and specific algorithmic latencies (detailed in Table \ref{tab:sensitivity_gpt2} and Table \ref{tab:sensitivity_qwen}).
+
+\begin{table}[htbp]
+    \centering
+    \caption{Impact of Relative Error Bounds on GPT-2 KV Tensor Compression (16 MB Original Size)}
+    \label{tab:sensitivity_gpt2}
+    \begin{tabular}{l | c c | c c }
+        \toprule
+        \textbf{Rel. Error Bound ($\epsilon_{rel}$)} & \textbf{Comp. Ratio} & \textbf{Max Abs Error} & \textbf{Comp. Time (ms)} & \textbf{Decomp. Time (ms)} \\
+        \midrule
+        $1 \times 10^{-2}$ & 6.02$\times$ & $2.06 \times 10^{-1}$ & 0.74 & 0.47 \\
+        $1 \times 10^{-3}$ & 3.75$\times$ & $2.06 \times 10^{-2}$ & 0.78 & 0.51 \\
+        $\mathbf{1 \times 10^{-4}}$ \textbf{(Default)} & \textbf{2.69$\times$} & $\mathbf{2.06 \times 10^{-3}}$ & \textbf{0.76} & \textbf{0.50} \\
+        $1 \times 10^{-5}$ & 2.10$\times$ & $2.06 \times 10^{-4}$ & 0.81 & 0.64 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Impact of Relative Error Bounds on Qwen2.5-1.5B KV Tensor Compression (16 MB Original Size)}
+    \label{tab:sensitivity_qwen}
+    \begin{tabular}{l | c c | c c }
+        \toprule
+        \textbf{Rel. Error Bound ($\epsilon_{rel}$)} & \textbf{Comp. Ratio} & \textbf{Max Abs Error} & \textbf{Comp. Time (ms)} & \textbf{Decomp. Time (ms)} \\
+        \midrule
+        $1 \times 10^{-2}$ & 8.25$\times$ & $6.07 \times 10^{0}$ & 0.77 & 0.47 \\
+        $1 \times 10^{-3}$ & 4.41$\times$ & $6.07 \times 10^{-1}$ & 0.87 & 0.60 \\
+        $\mathbf{1 \times 10^{-4}}$ \textbf{(Default)} & \textbf{3.06$\times$} & $\mathbf{6.08 \times 10^{-2}}$ & \textbf{0.81} & \textbf{0.55} \\
+        $1 \times 10^{-5}$ & 2.30$\times$ & $6.08 \times 10^{-3}$ & 0.82 & 0.58 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+As illustrated, relaxing the error bound to $10^{-2}$ yields extreme compression ratios (up to $8.25\times$ for Qwen2.5), significantly shrinking the physical PCIe payload to under 2 MB. However, this heavily degrades numeric precision, introducing maximum absolute errors exceeding $6.0$ for Qwen, which is generally unacceptable for sustaining autoregressive LLM output accuracy. Conversely, tightening the bound to $10^{-5}$ aggressively preserves mathematical fidelity but inevitably collapses the compression ratio to approximately $2.10\times$ to $2.30\times$. 
+
+Notably, the kernel execution latencies remain astonishingly consistent despite these aggressive precision sweeps---compression typically completes in under $0.87\text{ ms}$, and decompression in under $0.64\text{ ms}$. This empirical latency stability formally demonstrates that cuSZp's computational overhead on the RTX 5080 is overwhelmingly dominated by GPU memory interface bandwidth, rather than algorithmic branch divergence caused by variable precision scaling. Consequently, this detailed sensitivity analysis firmly justifies our rigorous selection of $10^{-4}$ as the optimal default baseline configuration. This setting successfully strikes a flawless Pareto-optimal balance, guaranteeing high effective bandwidth speedups alongside strict structural tensor integrity.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -328,6 +428,7 @@ While the current implementation establishes a robust foundation for compressed 
     \item \textbf{Asynchronous Overlap of PCIe Transfers:} The orchestration of memory operations can be further refined by adopting more advanced asynchronous execution models. Future implementations could divide large KV cache blocks into smaller chunks, heavily pipelining the architecture. This would allow the cuSZp compression of chunk $N+1$ to overlap entirely with the non-blocking PCIe data transfer of chunk $N$, theoretically masking almost all compression latency and maximizing bidirectional hardware utilization.
 \end{itemize}
 
+\clearpage
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{IEEEtran}
 \bibliography{refs}       

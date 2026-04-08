@@ -12,3 +12,109 @@
     pages={1--13},
     year={2023}
 }
+
+@Inbook{Hunt2023,
+author="Hunt, John",
+title="Monkey Patching",
+bookTitle="A Beginners Guide to Python 3 Programming",
+year="2023",
+publisher="Springer International Publishing",
+address="Cham",
+pages="487--490",
+abstract="Monkey Patching is a term you might well come across when looking into Python further or when searching the web for Python related concepts. It relates to the ability in Python to extend the functionality associated with a class/type at runtime.",
+isbn="978-3-031-35122-8",
+doi="10.1007/978-3-031-35122-8_43",
+url="https://doi.org/10.1007/978-3-031-35122-8_43"
+}
+
+@article{RODRIGUEZ_LUZARDO_2022,
+   title={A General Approach for Running Python Codes in OpenFOAM Using an Embedded PYBIND11 Python Interpreter},
+   volume={2},
+   ISSN={2753-8168},
+   url={http://dx.doi.org/10.51560/ofj.v2.79},
+   DOI={10.51560/ofj.v2.79},
+   journal={OpenFOAM® Journal},
+   publisher={Keysight Technologies UK Ltd},
+   author={RODRIGUEZ LUZARDO, SIMON ANTONIO and Cardiff, Philip},
+   year={2022},
+   month=dec, pages={166–182} }
+
+@inproceedings{10.1145/3458817.3476205,
+author = {Rajbhandari, Samyam and Ruwase, Olatunji and Rasley, Jeff and Smith, Shaden and He, Yuxiong},
+title = {ZeRO-infinity: breaking the GPU memory wall for extreme scale deep learning},
+year = {2021},
+isbn = {9781450384421},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3458817.3476205},
+doi = {10.1145/3458817.3476205},
+abstract = {In the last three years, the largest dense deep learning models have grown over 1000x to reach hundreds of billions of parameters, while the GPU memory has only grown by 5x (16 GB to 80 GB). Therefore, the growth in model scale has been supported primarily though system innovations that allow large models to fit in the aggregate GPU memory of multiple GPUs. However, we are getting close to the GPU memory wall. It requires 800 NVIDIA V100 GPUs just to fit a trillion parameter model for training, and such clusters are simply out of reach for most data scientists. In addition, training models at that scale requires complex combinations of parallelism techniques that puts a big burden on the data scientists to refactor their model.In this paper we present ZeRO-Infinity, a novel heterogeneous system technology that leverages GPU, CPU, and NVMe memory to allow for unprecedented model scale on limited resources without requiring model code refactoring. At the same time it achieves excellent training throughput and scalability, unencumbered by the limited CPU or NVMe bandwidth. ZeRO-Infinity can fit models with tens and even hundreds of trillions of parameters for training on current generation GPU clusters. It can be used to fine-tune trillion parameter models on a single NVIDIA DGX-2 node, making large models more accessible. In terms of training throughput and scalability, it sustains over 25 petaflops on 512 NVIDIA V100 GPUs (40\% of peak), while also demonstrating super linear scalability. An open source implementation of ZeRO-Infinity is available through DeepSpeed 1.},
+booktitle = {Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis},
+articleno = {59},
+numpages = {14},
+location = {St. Louis, Missouri},
+series = {SC '21}
+}
+
+@inproceedings{zhang-etal-2024-investigating,
+    title = "Investigating Layer Importance in Large Language Models",
+    author = "Zhang, Yang  and
+      Dong, Yanfei  and
+      Kawaguchi, Kenji",
+    editor = "Belinkov, Yonatan  and
+      Kim, Najoung  and
+      Jumelet, Jaap  and
+      Mohebbi, Hosein  and
+      Mueller, Aaron  and
+      Chen, Hanjie",
+    booktitle = "Proceedings of the 7th BlackboxNLP Workshop: Analyzing and Interpreting Neural Networks for NLP",
+    month = nov,
+    year = "2024",
+    address = "Miami, Florida, US",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2024.blackboxnlp-1.29/",
+    doi = "10.18653/v1/2024.blackboxnlp-1.29",
+    pages = "469--479",
+    abstract = "Large language models (LLMs) have gained increasing attention due to their prominent ability to understand and process texts. Nevertheless, LLMs largely remain opaque. The lack of understanding of LLMs has obstructed the deployment in safety-critical scenarios and hindered the development of better models. In this study, we advance the understanding of LLM by investigating the significance of individual layers in LLMs. We propose an efficient sampling method to faithfully evaluate the importance of layers using Shapley values, a widely used explanation framework in feature attribution and data valuation. In addition, we conduct layer ablation experiments to assess the performance degradation resulting from the exclusion of specific layers. Our findings reveal the existence of cornerstone layers, wherein certain early layers can exhibit a dominant contribution over others. Removing one cornerstone layer leads to a drastic collapse of the model performance, often reducing it to random guessing. Conversely, removing non-cornerstone layers results in only marginal performance changes. This study identifies cornerstone layers in LLMs and underscores their critical role for future research."
+}
+
+@article{radford2019language,
+  title={Language Models are Unsupervised Multitask Learners},
+  author={Radford, Alec and Wu, Jeff and Child, Rewon and Luan, David and Amodei, Dario and Sutskever, Ilya},
+  year={2019}
+}
+
+@article{qwen2.5,
+    title   = {Qwen2.5 Technical Report}, 
+    author  = {An Yang and Baosong Yang and Beichen Zhang and Binyuan Hui and Bo Zheng and Bowen Yu and Chengyuan Li and Dayiheng Liu and Fei Huang and Haoran Wei and Huan Lin and Jian Yang and Jianhong Tu and Jianwei Zhang and Jianxin Yang and Jiaxi Yang and Jingren Zhou and Junyang Lin and Kai Dang and Keming Lu and Keqin Bao and Kexin Yang and Le Yu and Mei Li and Mingfeng Xue and Pei Zhang and Qin Zhu and Rui Men and Runji Lin and Tianhao Li and Tingyu Xia and Xingzhang Ren and Xuancheng Ren and Yang Fan and Yang Su and Yichang Zhang and Yu Wan and Yuqiong Liu and Zeyu Cui and Zhenru Zhang and Zihan Qiu},
+    journal = {arXiv preprint arXiv:2412.15115},
+    year    = {2024}
+}
+
+@misc{zhang2022optopenpretrainedtransformer,
+      title={OPT: Open Pre-trained Transformer Language Models}, 
+      author={Susan Zhang and Stephen Roller and Naman Goyal and Mikel Artetxe and Moya Chen and Shuohui Chen and Christopher Dewan and Mona Diab and Xian Li and Xi Victoria Lin and Todor Mihaylov and Myle Ott and Sam Shleifer and Kurt Shuster and Daniel Simig and Punit Singh Koura and Anjali Sridhar and Tianlu Wang and Luke Zettlemoyer},
+      year={2022},
+      eprint={2205.01068},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2205.01068}, 
+}
+
+@inproceedings{biderman2023pythia,
+  title={Pythia: A suite for analyzing large language models across training and scaling},
+  author={Biderman, Stella and Schoelkopf, Hailey and Anthony, Quentin Gregory and Bradley, Herbie and O’Brien, Kyle and Hallahan, Eric and Khan, Mohammad Aflah and Purohit, Shivanshu and Prashanth, USVSN Sai and Raff, Edward and others},
+  booktitle={International Conference on Machine Learning},
+  pages={2397--2430},
+  year={2023},
+  organization={PMLR}
+}
+
+@misc{zhang2024tinyllama,
+      title={TinyLlama: An Open-Source Small Language Model}, 
+      author={Peiyuan Zhang and Guangtao Zeng and Tianduo Wang and Wei Lu},
+      year={2024},
+      eprint={2401.02385},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+}
