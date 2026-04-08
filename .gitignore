@@ -24,6 +24,7 @@ bin/
 *.dylib
 *.out
 *.app
+*.log
 CMakeCache.txt
 CMakeFiles/
 CMakeScripts/
