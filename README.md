@@ -126,18 +126,23 @@ Simply execute the root script. It will compile the C++ PyBind11 wrapper and tri
 
 To prove our `cuSZp` KV cache swapping wrapper performs exceptionally without cherry-picking random noise data, we automatically dump and slice the true Layer-0 key embeddings directly from 8 state-of-the-art causal language models using HuggingFace. 
 
-With an absolute error boundary target configured at `1e-4`, our `compress_swap` mechanism achieves the following metrics on an RTX 5080 when swapping 1M contiguous block elements:
+### 1. Hardware Baseline (Raw PCIe Transfer)
+- **PCIe Device-to-Host (Swap OUT) Bandwidth:** `3.08 GB/s`
+- **PCIe Host-to-Device (Swap IN) Bandwidth:** `19.06 GB/s`
 
-| Model | Compression Ratio | Compression Speed (GB/s) | Decompression Speed (GB/s) | Absolute Max Error |
-| :--- | :--- | :--- | :--- | :--- |
-| **GPT-2 (124m)** | `2.69x` | `22.09` | `33.80` | `2.06e-03` |
-| **facebook/opt-125m** | `2.63x` | `15.94` | `22.90` | `1.27e-03` |
-| **facebook/opt-350m** | `2.68x` | `21.20` | `32.34` | `3.17e-04` |
-| **EleutherAI/pythia-160m** | `2.69x` | `19.79` | `35.42` | `2.83e-03` |
-| **EleutherAI/pythia-410m** | `2.79x` | `19.07` | `28.69` | `2.56e-03` |
-| **Qwen/Qwen2.5-0.5B** | `2.42x` | `16.06` | `22.98` | `2.52e-02` |
-| **Qwen/Qwen2.5-1.5B** | `3.06x` | `20.73` | `30.24` | `6.08e-02` |
-| **TinyLlama-1.1B** | `2.85x` | `21.43` | `32.99` | `2.04e-03` |
+### 2. Upgraded Effective Performance (Compression + Transfer + Decompression)
+By integrating our `compress_swap` mechanism, the end-to-end effective bandwidths (including compression overhead) are compared below. With an absolute error boundary target configured at `1e-4`, it achieves the following metrics on an RTX 5080 when swapping 1M contiguous block elements:
+
+| Model | Compression Ratio | Absolute Max Error | Baseline Swap-Out | Effective Swap-Out | Out Speedup | Baseline Swap-In | Effective Swap-In | In Speedup |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **GPT-2 (124m)** | `2.69x` | `2.06e-03` | 3.08 GB/s | **6.03 GB/s** | **1.96x** | 19.06 GB/s | **20.38 GB/s** | **1.07x** |
+| **facebook/opt-125m** | `2.63x` | `1.27e-03` | 3.08 GB/s | **5.37 GB/s** | **1.74x** | 19.06 GB/s | **15.72 GB/s** | **0.82x** |
+| **facebook/opt-350m** | `2.68x` | `3.17e-04` | 3.08 GB/s | **5.95 GB/s** | **1.93x** | 19.06 GB/s | **19.81 GB/s** | **1.04x** |
+| **EleutherAI/pythia-160m** | `2.69x` | `2.83e-03` | 3.08 GB/s | **5.84 GB/s** | **1.90x** | 19.06 GB/s | **20.96 GB/s** | **1.10x** |
+| **EleutherAI/pythia-410m** | `2.79x` | `2.56e-03` | 3.08 GB/s | **5.92 GB/s** | **1.92x** | 19.06 GB/s | **18.63 GB/s** | **0.98x** |
+| **Qwen/Qwen2.5-0.5B** | `2.42x` | `2.52e-02` | 3.08 GB/s | **5.08 GB/s** | **1.65x** | 19.06 GB/s | **15.33 GB/s** | **0.80x** |
+| **Qwen/Qwen2.5-1.5B** | `3.06x` | `6.08e-02` | 3.08 GB/s | **6.48 GB/s** | **2.11x** | 19.06 GB/s | **19.92 GB/s** | **1.05x** |
+| **TinyLlama-1.1B** | `2.85x` | `2.04e-03` | 3.08 GB/s | **6.22 GB/s** | **2.02x** | 19.06 GB/s | **20.52 GB/s** | **1.08x** |
 
 *Results automatically recorded in the latest `./data` output artifacts.*
 
