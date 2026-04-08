@@ -1,6 +1,5 @@
 import json
 import glob
-import pandas as pd
 import os
 
 result_files = glob.glob("data/*_results.json")
@@ -15,11 +14,14 @@ for rf in result_files:
             if float(res.get("error_bound_setting", 0)) == 1e-4:
                 summary.append({
                     "Model": model_name,
-                    "Ratio (x)": res.get("compression_ratio", 0),
-                    "Comp. BW (GB/s)": res.get("compression_bandwidth_GB_s", 0),
-                    "Decomp. BW (GB/s)": res.get("decompression_bandwidth_GB_s", 0),
-                    "Max Error": res.get('max_absolute_error', 0)
+                    "Ratio": round(res.get("compression_ratio", 0), 2),
+                    "CompBW": round(res.get("compression_bandwidth_GB_s", 0), 2),
+                    "DecompBW": round(res.get("decompression_bandwidth_GB_s", 0), 2),
+                    "MaxError": f"{res.get('max_absolute_error', 0):.2e}"
                 })
 
-df = pd.DataFrame(summary)
-print(df.to_markdown(index=False))
+print("\n\n| Model | Compression Ratio | Compression Speed (GB/s) | Decompression Speed (GB/s) | Absolute Max Error |")
+print("| :--- | :--- | :--- | :--- | :--- |")
+for row in summary:
+    print(f"| **{row['Model']}** | `{row['Ratio']}x` | `{row['CompBW']}` | `{row['DecompBW']}` | `{row['MaxError']}` |")
+print("\n")

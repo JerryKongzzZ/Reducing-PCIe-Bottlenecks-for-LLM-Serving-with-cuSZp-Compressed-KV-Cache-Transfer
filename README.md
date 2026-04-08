@@ -130,14 +130,14 @@ With an absolute error boundary target configured at `1e-4`, our `compress_swap`
 
 | Model | Compression Ratio | Compression Speed (GB/s) | Decompression Speed (GB/s) | Absolute Max Error |
 | :--- | :--- | :--- | :--- | :--- |
-| **GPT-2 (124m)** | `2.69x` | `21.99` | `33.94` | `2.06e-03` |
-| **facebook/opt-125m** | `2.63x` | `18.45` | `25.45` | `1.27e-03` |
-| **facebook/opt-350m** | `2.68x` | `15.83` | `23.69` | `3.16e-04` |
-| **EleutherAI/pythia-160m** | `2.69x` | `16.46` | `29.57` | `2.83e-03` |
-| **EleutherAI/pythia-410m** | `2.78x` | `18.01` | `26.88` | `2.56e-03` |
-| **Qwen/Qwen2.5-0.5B** | `2.42x` | `19.21` | `30.79` | `2.52e-02` |
-| **Qwen/Qwen2.5-1.5B** | `3.06x` | `20.84` | `33.83` | `6.08e-02` |
-| **TinyLlama-1.1B** | `2.85x` | `17.58` | `28.98` | `2.04e-03` |
+| **GPT-2 (124m)** | `2.69x` | `22.09` | `33.80` | `2.06e-03` |
+| **facebook/opt-125m** | `2.63x` | `15.94` | `22.90` | `1.27e-03` |
+| **facebook/opt-350m** | `2.68x` | `21.20` | `32.34` | `3.17e-04` |
+| **EleutherAI/pythia-160m** | `2.69x` | `19.79` | `35.42` | `2.83e-03` |
+| **EleutherAI/pythia-410m** | `2.79x` | `19.07` | `28.69` | `2.56e-03` |
+| **Qwen/Qwen2.5-0.5B** | `2.42x` | `16.06` | `22.98` | `2.52e-02` |
+| **Qwen/Qwen2.5-1.5B** | `3.06x` | `20.73` | `30.24` | `6.08e-02` |
+| **TinyLlama-1.1B** | `2.85x` | `21.43` | `32.99` | `2.04e-03` |
 
 *Results automatically recorded in the latest `./data` output artifacts.*
 
