@@ -134,14 +134,14 @@ By integrating our `compress_swap` mechanism, the end-to-end effective bandwidth
 
 | Model | Compression Ratio | Absolute Max Error | Baseline Swap-Out | Effective Swap-Out | Out Speedup | Baseline Swap-In | Effective Swap-In | In Speedup |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **GPT-2 (124m)** | `2.69x` | `2.06e-03` | 3.08 GB/s | **6.03 GB/s** | **1.96x** | 19.06 GB/s | **20.38 GB/s** | **1.07x** |
-| **facebook/opt-125m** | `2.63x` | `1.27e-03` | 3.08 GB/s | **5.37 GB/s** | **1.74x** | 19.06 GB/s | **15.72 GB/s** | **0.82x** |
-| **facebook/opt-350m** | `2.68x` | `3.17e-04` | 3.08 GB/s | **5.95 GB/s** | **1.93x** | 19.06 GB/s | **19.81 GB/s** | **1.04x** |
-| **EleutherAI/pythia-160m** | `2.69x` | `2.83e-03` | 3.08 GB/s | **5.84 GB/s** | **1.90x** | 19.06 GB/s | **20.96 GB/s** | **1.10x** |
-| **EleutherAI/pythia-410m** | `2.79x` | `2.56e-03` | 3.08 GB/s | **5.92 GB/s** | **1.92x** | 19.06 GB/s | **18.63 GB/s** | **0.98x** |
-| **Qwen/Qwen2.5-0.5B** | `2.42x` | `2.52e-02` | 3.08 GB/s | **5.08 GB/s** | **1.65x** | 19.06 GB/s | **15.33 GB/s** | **0.80x** |
-| **Qwen/Qwen2.5-1.5B** | `3.06x` | `6.08e-02` | 3.08 GB/s | **6.48 GB/s** | **2.11x** | 19.06 GB/s | **19.92 GB/s** | **1.05x** |
-| **TinyLlama-1.1B** | `2.85x` | `2.04e-03` | 3.08 GB/s | **6.22 GB/s** | **2.02x** | 19.06 GB/s | **20.52 GB/s** | **1.08x** |
+| **GPT-2 (124m)** | `2.69x` | `2.06e-03` | 8.25 GB/s | **14.60 GB/s** | **1.77x** | 17.16 GB/s | **32.48 GB/s** | **1.89x** |
+| **Qwen_Qwen2.5-0.5B** | `2.42x` | `2.52e-02` | 14.29 GB/s | **19.53 GB/s** | **1.37x** | 17.92 GB/s | **30.52 GB/s** | **1.70x** |
+| **Qwen_Qwen2.5-1.5B** | `3.06x` | `6.08e-02` | 14.56 GB/s | **22.24 GB/s** | **1.53x** | 16.32 GB/s | **33.86 GB/s** | **2.08x** |
+| **facebook_opt-125m** | `2.63x` | `1.27e-03` | 15.05 GB/s | **21.61 GB/s** | **1.44x** | 20.75 GB/s | **37.36 GB/s** | **1.80x** |
+| **facebook_opt-350m** | `2.68x` | `3.17e-04` | 12.33 GB/s | **18.60 GB/s** | **1.51x** | 16.52 GB/s | **31.00 GB/s** | **1.88x** |
+| **EleutherAI_pythia-160m** | `2.69x` | `2.83e-03` | 13.20 GB/s | **19.77 GB/s** | **1.50x** | 16.63 GB/s | **32.25 GB/s** | **1.94x** |
+| **EleutherAI_pythia-410m** | `2.79x` | `2.56e-03` | 14.41 GB/s | **21.78 GB/s** | **1.51x** | 18.38 GB/s | **35.41 GB/s** | **1.93x** |
+| **TinyLlama-1.1B** | `2.85x` | `2.04e-03` | 14.29 GB/s | **21.69 GB/s** | **1.52x** | 18.93 GB/s | **36.11 GB/s** | **1.91x** |
 
 *Note: Once you run `./test.sh` locally, this table's baseline numbers will be automatically updated with the exact values for each specific model's cache tensor.*
 
