@@ -52,34 +52,30 @@
 % Cover page
 \printCompCover
 
-% Abstract page setup
-% \pagenumbering{roman} 
-\pagestyle{empty}
+% 恢复全局的右上角页码样式（在 polyu-comp.cls 中已经定义了 plain）
+\pagestyle{plain} 
 
+% Abstract
+\clearpage
 \section*{Abstract}
-\thispagestyle{empty}
-\addcontentsline{toc}{section}{Abstract} % Add Abstract to TOC
+\addcontentsline{toc}{section}{Abstract}
 The rapid scaling of Large Language Models (LLMs) has led to unprecedented context window lengths, significantly exacerbating the memory footprint of the Key-Value (KV) cache during inference. To manage limited GPU VRAM and prevent Out-Of-Memory errors, modern inference engines like vLLM dynamically offload inactive KV cache blocks to CPU RAM and restore them when needed. However, the physical CPU-GPU PCIe bandwidth introduces a severe latency bottleneck during these swap-in and swap-out operations, severely degrading overall inference throughput.
 
 To address this memory wall, this project introduces a novel "Compress-Transfer-Decompress" data pipeline that integrates cuSZp, an ultra-fast, GPU-accelerated error-bounded lossy compression framework, into the vLLM serving engine. We developed a high-performance C++ wrapper using PyBind11 to seamlessly bridge native CUDA compression APIs with vLLM's Python-based CacheEngine. By leveraging monkey-patching techniques, the system transparently intercepts, compresses KV cache tensors on the GPU prior to PCIe transmission, and decompresses them upon retrieval, drastically reducing the physical data volume transferred over the bus.
 
 Comprehensive benchmarking was conducted on high-bandwidth hardware (NVIDIA RTX 5080) utilizing true Layer-0 key embeddings extracted from 8 state-of-the-art causal language models, including GPT-2, Qwen2.5, OPT, Pythia, and TinyLlama. Operating under a strict absolute error bound of 1e-4 to preserve generation quality, the cuSZp-enabled pipeline achieved compression ratios ranging from 2.42$\times$ to 3.06$\times$. The system effectively absorbed the computational overhead of compression, yielding end-to-end effective bandwidth speedups of up to 1.77$\times$ for Swap-Out operations and 2.08$\times$ for Swap-In operations compared to uncompressed baselines. This project successfully demonstrates the viability and substantial performance benefits of integrating error-bounded lossy tensor compression to alleviate hardware bottlenecks in large-scale LLM serving.
 
+% Table of Contents
 \clearpage
-{
-  \pagestyle{empty}    % 隐藏目录第二页及之后的页码（如果有的话）
-  
-  \addtocontents{toc}{\protect\thispagestyle{empty}} 
-  
-  \tableofcontents
-}
+\tableofcontents
 
+% List of Tables and Figures (补充这一部分)
 \clearpage
-\pagestyle{plain}       % 恢复正文页码
-\pagenumbering{arabic}
-\setcounter{page}{1}
+\listoftables
+% \listoffigures % 如果你的最终版里加入了图表，请取消这行的注释
 
-
+% 正文开始
+\clearpage
 \section{Introduction}
 
 \subsection{Motivation}
