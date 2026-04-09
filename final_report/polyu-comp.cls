@@ -15,6 +15,7 @@
 \RequirePackage{titlesec}
 \RequirePackage{iftex}
 \RequirePackage{array} % Added for better table control
+\RequirePackage{microtype}
 
 % Fonts: pdflatex -> times (near TNR); xelatex/lualatex -> exact Times New Roman
 \ifPDFTeX
