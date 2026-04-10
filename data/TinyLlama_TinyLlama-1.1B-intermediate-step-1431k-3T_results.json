@@ -1,0 +1,58 @@
+{
+  "results": [
+    {
+      "tensor_size": 4194304,
+      "original_size_bytes": 16777216,
+      "compressed_size_bytes": 2441936.0,
+      "compression_ratio": 6.870456883390883,
+      "compression_time_ms": 0.7070673997077392,
+      "decompression_time_ms": 0.4870858996582683,
+      "compression_bandwidth_GB_s": 23.727887902814825,
+      "decompression_bandwidth_GB_s": 34.44406009652636,
+      "max_absolute_error": 0.20400309562683105,
+      "mean_absolute_error": 0.10066690295934677,
+      "error_bound_setting": 0.01
+    },
+    {
+      "tensor_size": 4194304,
+      "original_size_bytes": 16777216,
+      "compressed_size_bytes": 4149712.0,
+      "compression_ratio": 4.0429832238960195,
+      "compression_time_ms": 0.7686046499657095,
+      "decompression_time_ms": 0.5384438498367672,
+      "compression_bandwidth_GB_s": 21.828147931122327,
+      "decompression_bandwidth_GB_s": 31.15871043022615,
+      "max_absolute_error": 0.020400404930114746,
+      "mean_absolute_error": 0.01018720306456089,
+      "error_bound_setting": 0.001
+    },
+    {
+      "tensor_size": 4194304,
+      "original_size_bytes": 16777216,
+      "compressed_size_bytes": 5891724.0,
+      "compression_ratio": 2.8475902808753433,
+      "compression_time_ms": 0.7828861997040804,
+      "decompression_time_ms": 0.5085295999379014,
+      "compression_bandwidth_GB_s": 21.429954961961965,
+      "decompression_bandwidth_GB_s": 32.99162133737885,
+      "max_absolute_error": 0.0020400285720825195,
+      "mean_absolute_error": 0.0010222378186881542,
+      "error_bound_setting": 0.0001
+    },
+    {
+      "tensor_size": 4194304,
+      "original_size_bytes": 16777216,
+      "compressed_size_bytes": 7597072.0,
+      "compression_ratio": 2.20837922820792,
+      "compression_time_ms": 0.766090849720058,
+      "decompression_time_ms": 0.5232350995356683,
+      "compression_bandwidth_GB_s": 21.89977338344488,
+      "decompression_bandwidth_GB_s": 32.06439326201265,
+      "max_absolute_error": 0.00020503997802734375,
+      "mean_absolute_error": 0.00010214011126663536,
+      "error_bound_setting": 1e-05
+    }
+  ],
+  "device": "NVIDIA GeForce RTX 5080",
+  "cuda_version": "12.8"
+}
