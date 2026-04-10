@@ -15,7 +15,10 @@ __pycache__/
 
 # C++ / Build artifacts
 build/
+build_local/
 bin/
+*.cu
+*.cc
 *.o
 *.obj
 *.a
