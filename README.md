@@ -180,6 +180,6 @@ Ensure `nvidia-smi` works on your host. If Docker can't see the GPU, you must re
 ---
 
 ## 📑 Project Reports
-* **Final Report**: [final_report/Capstone_Project_2026_Final_Report_KONG_Zirui_22103493D.pdf](final_report/Capstone_Project_2026_Final_Report_KONG_Zirui_22103493D.pdf)
-* **Interim Report**: [interim_report/FYP_2026_Interim_Report.pdf](interim_report/FYP_2026_Interim_Report.pdf)
-* **Initial Proposal**: [project_proposal/Compress_Transfer_Decompress_for_LLM_Serving__cuSZp_Enabled_CPU_GPU_Data_Pipeline_in_vLLM.pdf](project_proposal/Compress_Transfer_Decompress_for_LLM_Serving__cuSZp_Enabled_CPU_GPU_Data_Pipeline_in_vLLM.pdf)
+* **Final Report**: [documents/final_report/Capstone_Project_2026_Final_Report_KONG_Zirui_22103493D.pdf](documents/final_report/Capstone_Project_2026_Final_Report_KONG_Zirui_22103493D.pdf)
+* **Interim Report**: [documents/interim_report/FYP_2026_Interim_Report.pdf](documents/interim_report/FYP_2026_Interim_Report.pdf)
+* **Initial Proposal**: [documents/project_proposal/Compress_Transfer_Decompress_for_LLM_Serving__cuSZp_Enabled_CPU_GPU_Data_Pipeline_in_vLLM.pdf](documents/project_proposal/Compress_Transfer_Decompress_for_LLM_Serving__cuSZp_Enabled_CPU_GPU_Data_Pipeline_in_vLLM.pdf)
