@@ -1,204 +1,119 @@
-# Compress-Transfer-Decompress for LLM Serving: cuSZp-Enabled CPU-GPU Data Pipeline in vLLM
+# Memory Wall is a Network Problem: Congestion-Aware KV Cache Swapping for High-Throughput LLM Serving
 
 ## 🌟 Project Overview
-This project is the Final Year Project (FYP) 2026 of the Department of Computing at **The Hong Kong Polytechnic University**. My name is **KONG Zirui** and my student ID is **22103493D**.
-I integrate the **cuSZp** error-bounded lossy compression framework into the **vLLM** engine to optimize KV Cache swapping between CPU and GPU, specifically targeting performance gains on high-bandwidth hardware like the **RTX 5080**.
+This project proposes a novel system design targeting the **CPU-GPU PCIe Memory Wall** during large language model (LLM) serving. By modeling the PCIe bus as a bandwidth-constrained network link and KV Cache swapping as traffic flows with varying Quality-of-Service (QoS) requirements, we introduce a **Congestion-Aware Adaptive Lossy Compression Scheduler**.
+
+This system dynamically balances PCIe communication overhead and model inference accuracy. Under high-concurrency (burst) traffic, it automatically sacrifices precision in less-sensitive deep network layers to instantly clear the PCIe queue, effectively preventing congestion storms and achieving Pareto-optimal end-to-end latency and throughput. 
+
+This repository contains the full source code, benchmark suites, and plotting scripts intended for **Artifact Evaluation at top-tier networking and systems conferences (e.g., INFOCOM, OSDI, SIGCOMM)**. It seamlessly integrates the **cuSZp** error-bounded lossy compression framework into the **vLLM** engine, targeting performance gains on high-bandwidth hardware like the **RTX 5080**.
+
+### 🏗️ System Architecture
+Our system consists of three decoupled modules:
+1. **Bottom-Level Engine (`integration/cuszp_wrapper/`)**: A PyBind11 C++ wrapper over `cuSZp` that intercepts PyTorch's native CUDA streams to perform non-blocking concurrent compression without CPU syncs.
+2. **vLLM Hijack Layer (`integration/compression_pipeline/compressed_swap.py`)**: A zero-intrusion monkey-patch for vLLM's `CacheEngine`, dynamically intercepting `_swap_in` and `_swap_out` to introduce independent metadata stores and prioritized asynchronous decompression.
+3. **The Brain (`integration/compression_pipeline/adaptive_scheduler.py`)**: The PCIe congestion-aware scheduler. It calculates pending bytes in the PCIe queue, categorizes congestion into `GREEN/YELLOW/RED` states, and greedily allocates relative error bounds (`eps`) based on the transformer layer's offline-profiled sensitivity.
 
 ---
 
 ## 📁 Project Structure
 ```text
 PolyU_COMP_Final_Year_Project_2026_Spring/
-├── benchmarks/               # Performance profiling and experimental scripts (Python)
-│   ├── benchmark_pipeline.py         # Unified benchmark pipeline for testing compression performance across multiple models
-│   └── test_vllm_integration.py      # Mock CacheEngine monkey patch validation to test cuSZp integration with vLLM
-├── data/                     # Output directory for `.pt` tensor caches and `.json` benchmark results
+├── benchmarks/               # Experimental scripts and artifact evaluation
+│   ├── benchmark_pipeline.py         # Microbenchmarks across 8 models
+│   ├── layer_sensitivity_sweep.py    # Offline profiling for layer sensitivity
+│   ├── evaluate_policies.py          # End-to-end policy evaluation (Adaptive vs Static)
+│   ├── run_pareto_queue_ablation.py  # Generates paper-ready figures (Pareto, Queue, Ablation)
+│   └── test_vllm_integration.py      # Monkey-patch validation
+├── data/                     # Output directory for `.json` results and `figures/`
 ├── docker/                   # Docker infrastructure (Dockerfile, run.sh)
-├── final_report/             # Final FYP thesis (PDF)
 ├── integration/              # Core source code (C++/Python bindings)
-│   ├── compression_pipeline/         # Python hook for vLLM (compressed_swap.py)
+│   ├── compression_pipeline/         # Python hook & Adaptive Scheduler for vLLM
 │   └── cuszp_wrapper/                # cuSZp PyBind11 C++ Wrapper
-├── interim_report/           # FYP Interim Report (PDF)
-├── project_proposal/         # FYP Proposal (PDF)
+├── documents/                # Legacy FYP documents (Proposal, Interim, Final Report)
 ├── requirements.txt          # Python dependencies
-├── test.sh                   # Root Automation Script (Builds & Tests)
-├── integrated_validation.py  # Unified script for benchmarks and vLLM integration tests
-└── README.md                 # This project guide
+├── test.sh                   # Root Automation Script (Builds & Microbenchmarks)
+└── README.md                 # Artifact Evaluation Guide
 ```
 
 ---
 
-## 🚀 Execution Guide
+## 🎯 Artifact Evaluation & Execution Guide
 
-You can run this project in two ways: **via Docker** (Recommended for quick testing without polluting your host) or **Natively on Linux/WSL2** (Recommended for development and direct hardware access).
+To reproduce the experimental results presented in the paper, we provide an automated pipeline. You can run this project in two ways: **via Docker** (Recommended for pure evaluation) or **Natively on Linux/WSL2** (Recommended for development).
 
-### Option A: Run via Docker (Recommended)
-Docker handles the complex CUDA and PyTorch dependencies automatically. This is the safest way to avoid dependency hell.
+### 1. Environment Setup
 
-**0. Install Prerequisites (Ubuntu/Debian)**
-Ensure you have Docker and the NVIDIA Container Toolkit installed:
-```bash
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Install NVIDIA Container Toolkit
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
-  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-sudo apt-get update
-sudo apt-get install -y nvidia-container-toolkit
-sudo nvidia-ctk runtime configure --runtime=docker
-sudo systemctl restart docker
-```
-
-**1. Grant permissions and resolve Windows line ending issues**
+**Option A: Run via Docker (Recommended)**
+Docker handles the complex CUDA and PyTorch dependencies automatically.
 ```bash
 chmod +x test.sh docker/run.sh
 sed -i 's/\r$//' test.sh docker/run.sh docker/Dockerfile
-```
-
-**2. Build the Docker Environment**
-This step "bakes" the environment, automatically pulling PyTorch, CUDA, and compiling the original cuSZp framework into the image.
-```bash
 cd docker
-./run.sh build
+./run.sh build  # Builds the image with cuSZp and dependencies
 ```
 
-**3. Execute the Pipeline**
-This runs `./test.sh` inside the ephemeral container and mounts your local files so results are saved to your host:
+**Option B: Run Natively (Linux / WSL2)**
+*Requires `cmake` (3.18+), `gcc/g++` (11+), and the CUDA Toolkit.*
 ```bash
-./run.sh test
-```
-
-*(Optional) Interactive debugging:*
-If you need to manually debug or develop code inside the isolated environment, use `./run.sh run` to open an interactive bash session.
-
----
-
-### Option B: Run Natively (Linux / WSL2)
-
-[!CAUTION]
-Warning: This method requires a perfectly configured C++ development environment. If you do not have cmake (version 3.18+), gcc/g++ (11+), and the CUDA Toolkit correctly set in your $PATH, the compilation will fail. If you encounter environment errors, please use the Docker method above.
-
-If you are developing actively, you might want to run natively to utilize your host IDE's code completion (e.g., VS Code Pylance/C++ Intellisense) and avoid Docker overhead.
-
-**0. Install System Dependencies**
-Ensure you have `git`, `cmake`, `build-essential`, and Python dependencies installed. You must also have the **CUDA Toolkit** installed manually beforehand.
-```bash
-sudo apt-get update 
-sudo apt-get install -y git cmake build-essential python3.10-dev python3-venv python3-pip
-```
-
-**1. Grant permissions and resolve Windows line ending issues**
-```bash
-chmod +x test.sh docker/run.sh
-sed -i 's/\r$//' test.sh docker/run.sh docker/Dockerfile
-```
-
-**2. Install cuSZp Core Library globally**
-Our C++ Wrapper expects the `cuSZp` core framework to be located at `/opt/cuSZp`. You must compile it globally:
-```bash
-sudo rm -rf /opt/cuSZp
+# 1. Install cuSZp Core Library globally
 sudo git clone https://github.com/szcompressor/cuSZp.git /opt/cuSZp
-cd /opt/cuSZp
-sudo mkdir -p build && cd build
+cd /opt/cuSZp && sudo mkdir -p build && cd build
 sudo cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../install/ ..
-sudo make -j$(nproc)
-sudo make install
-cd - # Return to project root
-```
+sudo make -j$(nproc) && sudo make install
 
-**3. Prepare Python Environment**
-Create a local virtual environment to avoid polluting global Python packages.
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
+# 2. Setup Python environment
+cd /path/to/project
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**4. Run the Pipeline**
-Simply execute the root script. It will compile the C++ PyBind11 wrapper and trigger the benchmarks:
+### 2. Reproducing Paper Experiments
+
+We provide push-button scripts to generate all tables and figures used in the paper.
+
+**Step 1: Microbenchmarks (Table Generation)**
+This script automatically compiles the C++ PyBind11 wrapper, generates real KV cache tensors for 8 state-of-the-art models, profiles the baseline PCIe transfer latency, executes the cuSZp compression + transfer simulation, and calculates effective speedups.
 ```bash
+# If using Docker:
+./docker/run.sh test
+# If running natively:
 ./test.sh
 ```
+*Output: Detailed bandwidth/latency json files saved in `data/`.*
 
-**Rebuild after code changes**
-If you modify the C++ wrapper (`integration/cuszp_wrapper/*`) or the pybind bindings, recompile before running Python tests:
+**Step 2: Generate Offline Layer Sensitivity Profile**
+Profiles the KL-divergence of compressing individual Transformer layers to build the sensitivity map.
 ```bash
-cd integration/cuszp_wrapper
-rm -rf build_local && mkdir -p build_local && cd build_local
-cmake .. -Dpybind11_DIR=$(python3 -m pybind11 --cmakedir) \
-  -DCMAKE_PREFIX_PATH=$(python3 -c "import torch; print(torch.utils.cmake_prefix_path)")
-make -j$(nproc)
+PYTHONPATH=integration/compression_pipeline python3 benchmarks/layer_sensitivity_sweep.py --model gpt2 --out data/layer_sensitivity.json --eps 1e-5 1e-4 1e-3 1e-2
 ```
-Or run the top-level `./test.sh` which performs compilation automatically.
 
-### Enabling the PCIe-Congestion-Aware Adaptive Scheduler
-The integration now supports an adaptive scheduler that maps runtime pending swap volume
-to per-layer relative error budgets (eps_rel) and a prioritized asynchronous `swap_in`.
+**Step 3: End-to-End Evaluation & Generating Paper Figures**
+Evaluates the full adaptive system against baselines (Static cuSZp, Uncompressed vLLM) and plots the Pareto boundaries, queue depths, and ablation studies.
+```bash
+PYTHONPATH=integration/compression_pipeline python3 benchmarks/evaluate_policies.py --models gpt2 --out data/eval_summary.json
 
-Basic usage (inside your vLLM initialization code):
+# Generate INFOCOM/Top-Tier conference specific evaluation plots (Pareto, Queue Depth, Ablation)
+python3 benchmarks/run_pareto_queue_ablation.py
+```
+*Output: `pareto_boundary.png`, `queue_depth_waterfall.png`, and `ablation_study.png` will be saved in `data/figures/`.*
+
+### 3. API Usage: Enabling the Scheduler in vLLM
+Our integration exposes a zero-intrusion monkey-patch for vLLM. It can be initialized in a few lines of code:
 ```python
 from integration.compression_pipeline.compressed_swap import setup_vllm_compression
 
-# enable_adaptive=True turns on automatic per-layer sensitivity inference
+# Inside your vLLM engine initialization code:
+# enable_adaptive=True turns on automatic per-layer sensitivity inference and PCIe queue monitoring
 patcher = setup_vllm_compression(engine, error_bound=1e-4, enable_adaptive=True)
 ```
 
-For reproducible experiments, generate an offline `layer_sensitivity.json` (see `benchmarks/`) and create a scheduler explicitly:
-```python
-from integration.compression_pipeline.adaptive_scheduler import PCIEAdaptiveScheduler
-from integration.compression_pipeline.compressed_swap import CuSZpCompressor, CompressedCacheEngineMonkeyPatch
+---
 
-layer_map = load_layer_sensitivity('data/layer_sensitivity.json')
-scheduler = PCIEAdaptiveScheduler(layer_map, low_threshold_bytes=32<<20, high_threshold_bytes=128<<20)
-compressor = CuSZpCompressor(error_bound=1e-4)
-patcher = CompressedCacheEngineMonkeyPatch(engine.cache_engine, compressor, scheduler=scheduler)
-patcher.patch()
-```
-
-Notes:
-- `compress_with_eps` uses a per-call `eps_rel` argument (no global config races). Rebuild the C++ extension after pulling changes.
-- `swap_in` now schedules prioritized asynchronous decompression: `shallow` layers are decompressed and synchronized immediately, while `mid`/`deep` are dispatched asynchronously on background CUDA streams.
-
-### Reproducible evaluation commands (paper-ready)
-1. Build the extension and run the benchmark pipeline (single-run):
-```bash
-./test.sh
-```
-2. Run the layer sensitivity sweep (generate `layer_sensitivity.json`):
-```bash
-PYTHONPATH=integration/compression_pipeline python3 benchmarks/benchmark_pipeline.py --tensor-size 4194304 --error-bound 1e-5 --iterations 30
-# (edit benchmark script to export per-layer sensitivity; see benchmarks/ for customization)
-```
-3. Run full experimental suite with adaptive scheduler enabled and save outputs:
-```bash
-PYTHONPATH=integration/compression_pipeline python3 benchmarks/test_vllm_integration.py --enable-adaptive --layer-sensitivity data/layer_sensitivity.json
-```
-
-### Generate evaluation summary and paper-ready figures
-
-After producing `layer_sensitivity.json` and rebuilding the C++ extension, you can run the full evaluation suite and generate plots used in the paper:
-
-```bash
-# Run evaluation (produces data/eval_summary.json)
-PYTHONPATH=integration/compression_pipeline python3 benchmarks/evaluate_policies.py --models gpt2 --out data/eval_summary.json
-
-# Produce PNG figures in data/figures/
-python3 benchmarks/plot_summary.py data/eval_summary.json
-```
-
-In your paper, report: TTFT vs concurrency, 95/99P token latency, compression ratio vs perplexity delta, PCIe queue traces, and ablation over low/high threshold choices.
-
-## 📊 Benchmarks on Real KV Cache (8 Pretrained Models)
+## 📊 Microbenchmark Results (Hardware: RTX 5080)
 
 To prove our `cuSZp` KV cache swapping wrapper performs exceptionally without cherry-picking random noise data, we automatically dump and slice the true Layer-0 key embeddings directly from 8 state-of-the-art causal language models using HuggingFace. 
 
-### Compression Metrics vs Baseline
-By integrating our `compress_swap` mechanism, the end-to-end effective bandwidths (including compression overhead) are compared below against their respective raw baseline transfer speeds. With an absolute error boundary target configured at `1e-4`, it achieves the following metrics on an RTX 5080 when swapping contiguous block elements:
+By integrating our `compress_swap` mechanism, the end-to-end effective bandwidths (including compression overhead) are compared below against their respective raw baseline transfer speeds. With an absolute error boundary target configured at `1e-4`:
 
 | Model | Compression Ratio | Absolute Max Error | Baseline Swap-Out | Effective Swap-Out | Out Speedup | Baseline Swap-In | Effective Swap-In | In Speedup |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -211,43 +126,28 @@ By integrating our `compress_swap` mechanism, the end-to-end effective bandwidth
 | **EleutherAI_pythia-410m** | `2.79x` | `2.56e-03` | 14.41 GB/s | **21.78 GB/s** | **1.51x** | 18.38 GB/s | **35.41 GB/s** | **1.93x** |
 | **TinyLlama-1.1B** | `2.85x` | `2.04e-03` | 14.29 GB/s | **21.69 GB/s** | **1.52x** | 18.93 GB/s | **36.11 GB/s** | **1.91x** |
 
-*Note: Once you run `./test.sh` locally, this table's baseline numbers will be automatically updated with the exact values for each specific model's cache tensor.*
-
-*Results automatically recorded in the latest `./data` output artifacts.*
+*Note: Baseline numbers are automatically updated dynamically upon running `./test.sh` locally.*
 
 ---
 
-## 🔍 What happens during `./test.sh`?
-Whether running natively or in Docker, the root automation script performs 3 main tasks:
-1.  **Automated C++ Compilation**: Enters `integration/cuszp_wrapper`, cleans the build cache, and compiles the Python Wrapper for cuSZp via PyBind11 and CMake.
-2.  **Unified Benchmark Pipeline**: Executes `benchmarks/benchmark_pipeline.py`. For each of the 8 models, it automatically generates real KV cache tensors, profiles the baseline PCIe H2D/D2H transfer latency, executes the cuSZp compression + transfer simulation, calculates effective speedups, and produces a single unified summary in Markdown.
-3.  **vLLM Integration Simulation**: Executes `benchmarks/test_vllm_integration.py` to mock a `vllm.worker.cache_engine.CacheEngine` instance and demonstrates our `CompressedCacheEngineMonkeyPatch` correctly intercepts, compresses (`swap_out`), and recovers (`swap_in`) KV blocks transparently.
-
-*Results will be automatically saved in `.json` files in the root directory.*
-
----
-
-## ⚠️ Cross-Platform Troubleshooting (Windows/WSL2)
+## ⚠️ Troubleshooting (Windows/WSL2)
 
 ### 1. The "Command Not Found" Error (LF vs CRLF)
-If `./test.sh` or `./run.sh` fails with strange syntax errors, it is likely due to Windows line endings (CRLF) being cloned into WSL.
+If shell scripts fail with syntax errors, it is likely due to Windows line endings (CRLF).
 * **Quick Fix**: Run `sed -i 's/\r$//' test.sh docker/run.sh`
-* **VS Code Fix**: Check the bottom-right corner of the editor. If it says **CRLF**, click it, change to **LF**, and save the file.
 
 ### 2. Permanent Permission Lock (Git)
-To stop Git from losing your `chmod +x` executable settings between Windows and WSL:
+To stop Git from losing your executable settings between Windows and WSL:
 ```bash
 git update-index --chmod=+x test.sh
 git update-index --chmod=+x docker/run.sh
 git commit -m "chore: lock executable permissions"
 ```
 
-### 3. GPU Passthrough Issues
-Ensure `nvidia-smi` works on your host. If Docker can't see the GPU, you must re-check the **NVIDIA Container Toolkit** installation on your WSL2/Linux host.
-
 ---
 
-## 📑 Project Reports
+## 🎓 Legacy Project Documentation (FYP 2026)
+This project originated as a Capstone Project (FYP 2026) at The Hong Kong Polytechnic University by KONG Zirui (22103493D).
 * **Final Report**: [documents/final_report/Capstone_Project_2026_Final_Report_KONG_Zirui_22103493D.pdf](documents/final_report/Capstone_Project_2026_Final_Report_KONG_Zirui_22103493D.pdf)
 * **Interim Report**: [documents/interim_report/FYP_2026_Interim_Report.pdf](documents/interim_report/FYP_2026_Interim_Report.pdf)
 * **Initial Proposal**: [documents/project_proposal/Compress_Transfer_Decompress_for_LLM_Serving__cuSZp_Enabled_CPU_GPU_Data_Pipeline_in_vLLM.pdf](documents/project_proposal/Compress_Transfer_Decompress_for_LLM_Serving__cuSZp_Enabled_CPU_GPU_Data_Pipeline_in_vLLM.pdf)
