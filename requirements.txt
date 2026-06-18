@@ -5,3 +5,5 @@ setuptools
 wheel
 vllm
 transformers
+matplotlib
+tqdm

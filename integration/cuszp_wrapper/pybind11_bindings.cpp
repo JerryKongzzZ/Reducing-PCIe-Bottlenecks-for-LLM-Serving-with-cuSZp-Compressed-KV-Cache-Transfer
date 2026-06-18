@@ -46,20 +46,21 @@ PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
         .def(py::init<const CuSZpWrapper::CompressionConfig&, int>(),
              py::arg("config"), py::arg("device_id") = 0)
         .def("compress", 
-             [](CuSZpWrapper& self, torch::Tensor input_tensor, torch::Tensor compressed_buffer) {
+             [](CuSZpWrapper& self, torch::Tensor input_tensor, torch::Tensor compressed_buffer, float eps_override) {
                  size_t compressed_size = 0;
                  float actual_error_bound = 0.0f;
                  // Automatically get the CUDA stream currently used by PyTorch to synchronize with vLLM
                  cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();
                  
-                 // Call the actual C++ method
-                 bool success = self.compress(input_tensor, compressed_buffer, compressed_size, actual_error_bound, stream);
+                 // Call the actual C++ method with per-call eps_override
+                 bool success = self.compress(input_tensor, compressed_buffer, compressed_size, actual_error_bound, eps_override, stream);
                  
                  // Return Tuple to Python: (success flag, potentially reallocated buffer, actual compressed size, actual error bound)
                  return py::make_tuple(success, compressed_buffer, compressed_size, actual_error_bound);
              },
              py::arg("input_tensor"),
-             py::arg("compressed_buffer"))
+             py::arg("compressed_buffer"),
+             py::arg("eps_override") = -1.0f)
              
         .def("decompress",
              [](CuSZpWrapper& self, torch::Tensor compressed_buffer, size_t compressed_size, torch::Tensor output_tensor, float actual_error_bound) {

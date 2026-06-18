@@ -23,6 +23,7 @@ public:
         torch::Tensor& compressed_buffer,
         size_t& compressed_size,
         float& actual_error_bound,
+        float eps_override = -1.0f,
         cudaStream_t stream = nullptr
     );
 

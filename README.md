@@ -125,6 +125,74 @@ Simply execute the root script. It will compile the C++ PyBind11 wrapper and tri
 ./test.sh
 ```
 
+**Rebuild after code changes**
+If you modify the C++ wrapper (`integration/cuszp_wrapper/*`) or the pybind bindings, recompile before running Python tests:
+```bash
+cd integration/cuszp_wrapper
+rm -rf build_local && mkdir -p build_local && cd build_local
+cmake .. -Dpybind11_DIR=$(python3 -m pybind11 --cmakedir) \
+  -DCMAKE_PREFIX_PATH=$(python3 -c "import torch; print(torch.utils.cmake_prefix_path)")
+make -j$(nproc)
+```
+Or run the top-level `./test.sh` which performs compilation automatically.
+
+### Enabling the PCIe-Congestion-Aware Adaptive Scheduler
+The integration now supports an adaptive scheduler that maps runtime pending swap volume
+to per-layer relative error budgets (eps_rel) and a prioritized asynchronous `swap_in`.
+
+Basic usage (inside your vLLM initialization code):
+```python
+from integration.compression_pipeline.compressed_swap import setup_vllm_compression
+
+# enable_adaptive=True turns on automatic per-layer sensitivity inference
+patcher = setup_vllm_compression(engine, error_bound=1e-4, enable_adaptive=True)
+```
+
+For reproducible experiments, generate an offline `layer_sensitivity.json` (see `benchmarks/`) and create a scheduler explicitly:
+```python
+from integration.compression_pipeline.adaptive_scheduler import PCIEAdaptiveScheduler
+from integration.compression_pipeline.compressed_swap import CuSZpCompressor, CompressedCacheEngineMonkeyPatch
+
+layer_map = load_layer_sensitivity('data/layer_sensitivity.json')
+scheduler = PCIEAdaptiveScheduler(layer_map, low_threshold_bytes=32<<20, high_threshold_bytes=128<<20)
+compressor = CuSZpCompressor(error_bound=1e-4)
+patcher = CompressedCacheEngineMonkeyPatch(engine.cache_engine, compressor, scheduler=scheduler)
+patcher.patch()
+```
+
+Notes:
+- `compress_with_eps` uses a per-call `eps_rel` argument (no global config races). Rebuild the C++ extension after pulling changes.
+- `swap_in` now schedules prioritized asynchronous decompression: `shallow` layers are decompressed and synchronized immediately, while `mid`/`deep` are dispatched asynchronously on background CUDA streams.
+
+### Reproducible evaluation commands (paper-ready)
+1. Build the extension and run the benchmark pipeline (single-run):
+```bash
+./test.sh
+```
+2. Run the layer sensitivity sweep (generate `layer_sensitivity.json`):
+```bash
+PYTHONPATH=integration/compression_pipeline python3 benchmarks/benchmark_pipeline.py --tensor-size 4194304 --error-bound 1e-5 --iterations 30
+# (edit benchmark script to export per-layer sensitivity; see benchmarks/ for customization)
+```
+3. Run full experimental suite with adaptive scheduler enabled and save outputs:
+```bash
+PYTHONPATH=integration/compression_pipeline python3 benchmarks/test_vllm_integration.py --enable-adaptive --layer-sensitivity data/layer_sensitivity.json
+```
+
+### Generate evaluation summary and paper-ready figures
+
+After producing `layer_sensitivity.json` and rebuilding the C++ extension, you can run the full evaluation suite and generate plots used in the paper:
+
+```bash
+# Run evaluation (produces data/eval_summary.json)
+PYTHONPATH=integration/compression_pipeline python3 benchmarks/evaluate_policies.py --models gpt2 --out data/eval_summary.json
+
+# Produce PNG figures in data/figures/
+python3 benchmarks/plot_summary.py data/eval_summary.json
+```
+
+In your paper, report: TTFT vs concurrency, 95/99P token latency, compression ratio vs perplexity delta, PCIe queue traces, and ablation over low/high threshold choices.
+
 ## 📊 Benchmarks on Real KV Cache (8 Pretrained Models)
 
 To prove our `cuSZp` KV cache swapping wrapper performs exceptionally without cherry-picking random noise data, we automatically dump and slice the true Layer-0 key embeddings directly from 8 state-of-the-art causal language models using HuggingFace. 

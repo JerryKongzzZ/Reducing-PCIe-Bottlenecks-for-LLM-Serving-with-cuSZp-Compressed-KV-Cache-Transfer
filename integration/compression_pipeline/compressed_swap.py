@@ -10,6 +10,7 @@ import logging
 from typing import Dict, List, Tuple, Optional
 import sys
 import os
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,13 @@ except ImportError as e:
     logger.error(f"Failed to import cuszp_wrapper_cpp: {e}")
     logger.error("cuSZp compression will not be available.")
     cuszp_wrapper_cpp = None
+
+# Optional adaptive scheduler (local import when present)
+try:
+    from adaptive_scheduler import PCIEAdaptiveScheduler, Block as SchedulerBlock
+except Exception:
+    PCIEAdaptiveScheduler = None
+    SchedulerBlock = None
 
 
 class CuSZpCompressor:
@@ -67,6 +75,19 @@ class CuSZpCompressor:
             "swap_out_count": 0,
             "swap_in_count": 0
         }
+
+    def compress_with_eps(self, input_tensor, compressed_buffer, eps_rel: float):
+        """Update runtime error bound and compress using the underlying C++ wrapper.
+
+        Returns the same tuple as the pybind `compress` wrapper:
+        (success: bool, compressed_buffer: Tensor, compressed_size: int, actual_error_bound: float)
+        """
+        if cuszp_wrapper_cpp is None:
+            raise RuntimeError("cuszp_wrapper_cpp is not available")
+
+        # Call compress via the pybind wrapper with per-call eps_override
+        # Binding exposed: compress(input_tensor, compressed_buffer, eps_override=-1.0)
+        return self.compressor.compress(input_tensor, compressed_buffer, float(eps_rel))
         
     def get_compression_ratio(self) -> float:
         """Calculate average compression ratio"""
@@ -81,17 +102,33 @@ class CompressedCacheEngineMonkeyPatch:
     This replaces the swap_in and swap_out methods to inject compression.
     """
     
-    def __init__(self, cache_engine, compressor: CuSZpCompressor):
+    def __init__(
+        self,
+        cache_engine,
+        compressor: CuSZpCompressor,
+        scheduler: Optional[PCIEAdaptiveScheduler] = None,
+        enable_auto_layer_infer: bool = False,
+        low_threshold_bytes: int = 32 * 1024 * 1024,
+        high_threshold_bytes: int = 128 * 1024 * 1024,
+    ):
         self.engine = cache_engine
         self.compressor = compressor
-        
+
+        # Optional adaptive scheduler (can be supplied externally or auto-inferred)
+        self.scheduler = scheduler
+        self.enable_auto_layer_infer = enable_auto_layer_infer
+        self.low_threshold_bytes = low_threshold_bytes
+        self.high_threshold_bytes = high_threshold_bytes
+
         # Save original methods
         self._swap_out_blocks_to_host_original = self.engine._swap_out_blocks_to_host
         self._swap_in_blocks_from_host_original = self.engine._swap_in_blocks_from_host
-        
+
         # Host memory buffer for compressed data (can't be stored in regular cache)
         # In a real implementation, we would need a dedicated compressed block manager
         self.compressed_blocks_store = {}
+        # Decompression streams per sensitivity class (lazy-created)
+        self._decompression_streams: Dict[str, torch.cuda.Stream] = {}
         
     def patch(self):
         """Apply monkey patch"""
@@ -106,120 +143,218 @@ class CompressedCacheEngineMonkeyPatch:
         self.engine._swap_in_blocks_from_host = self._swap_in_blocks_from_host_original
         
     def _swap_out_blocks_to_host_patched(self, src_cache, dst_cache, src_block_indices, dst_block_indices):
-        """Patched swap_out_blocks_to_host method"""
+        """Patched swap_out_blocks_to_host method with congestion-aware eps allocation."""
         # Note: This is a simplified prototype implementation
         # In production vLLM, cache operations are highly optimized with custom CUDA kernels
-        
-        # Get shape info
+
         num_blocks = len(src_block_indices)
         if num_blocks == 0:
             return
-            
-        block_size_bytes = src_cache[0].element_size() * src_cache[0][0].numel()
-        total_bytes = num_blocks * block_size_bytes
-        
-        # For simplicity, we process block by block in this prototype
-        # Real implementation would use batched processing
+
+        # Prepare pending block list for scheduler
+        pending_blocks = []
         for i, (src_idx, dst_idx) in enumerate(zip(src_block_indices, dst_block_indices)):
             for layer_idx in range(len(src_cache)):
                 _src_cache = src_cache[layer_idx][src_idx]
-                
-                # Estimate compressed buffer size
-                estimated_size = cuszp_wrapper_cpp.CuSZpWrapper.estimate_compressed_buffer_size(
-                    _src_cache.numel() * _src_cache.element_size()
+                size_bytes = _src_cache.numel() * _src_cache.element_size()
+                key = (layer_idx, int(dst_idx))
+                pending_blocks.append(SchedulerBlock(key=key, layer_idx=layer_idx, block_idx=int(dst_idx), size_bytes=size_bytes, tensor=_src_cache))
+
+        # Auto-infer a default layer sensitivity map on first use if requested
+        if self.scheduler is None and self.enable_auto_layer_infer:
+            try:
+                num_layers = len(src_cache)
+                layer_map = PCIEAdaptiveScheduler.default_layer_sensitivity(num_layers)
+                self.scheduler = PCIEAdaptiveScheduler(layer_map, low_threshold_bytes=self.low_threshold_bytes, high_threshold_bytes=self.high_threshold_bytes)
+                logger.info("Adaptive scheduler auto-initialized with %d layers", num_layers)
+            except Exception:
+                self.scheduler = None
+
+        # Compute eps assignment map
+        eps_map = {}
+        if self.scheduler is not None:
+            try:
+                eps_map = self.scheduler.compute_eps_map(pending_blocks)
+            except Exception:
+                logger.exception("Scheduler failed; falling back to static error bound")
+                eps_map = {}
+
+        # Process and compress block-by-block using eps_map (or default)
+        for b in pending_blocks:
+            layer_idx = b.layer_idx
+            dst_idx = b.block_idx
+            _src_cache = b.tensor
+
+            estimated_size = cuszp_wrapper_cpp.CuSZpWrapper.estimate_compressed_buffer_size(
+                _src_cache.numel() * _src_cache.element_size()
+            )
+
+            compressed_buffer = torch.empty(
+                estimated_size,
+                dtype=torch.uint8,
+                device=_src_cache.device,
+            )
+
+            eps_rel = eps_map.get(b.key, self.compressor.error_bound)
+
+            # Use the new compress_with_eps wrapper which updates runtime config
+            success, compressed_buffer, actual_size, actual_eb = self.compressor.compress_with_eps(
+                _src_cache, compressed_buffer, float(eps_rel)
+            )
+
+            if not success:
+                logger.warning("Compression failed, falling back to uncompressed swap")
+                self._swap_out_blocks_to_host_original(
+                    src_cache, dst_cache, src_block_indices, dst_block_indices
                 )
-                
-                # Allocate temporary buffer
-                compressed_buffer = torch.empty(
-                    estimated_size, 
-                    dtype=torch.uint8, 
-                    device=_src_cache.device
-                )
-                
-                # Compress
-                success, compressed_buffer, actual_size, actual_eb = self.compressor.compressor.compress(
-                    _src_cache,
-                    compressed_buffer
-                )
-                
-                if not success:
-                    logger.warning("Compression failed, falling back to uncompressed swap")
-                    self._swap_out_blocks_to_host_original(
-                        src_cache, dst_cache, src_block_indices, dst_block_indices
-                    )
-                    return
-                    
-                # Store metadata and compressed data (transfer to CPU)
-                # In real vLLM, this would go to a specialized pinned memory allocator
+                return
+
+            cpu_compressed = compressed_buffer[:actual_size].cpu()
+
+            # Move compressed blob to pinned host memory for async H2D transfer
+            try:
+                cpu_compressed = compressed_buffer[:actual_size].cpu().pin_memory()
+            except Exception:
+                # pin_memory may fail on non-CPU or if not supported; keep regular CPU tensor
                 cpu_compressed = compressed_buffer[:actual_size].cpu()
-                
-                # Save to our custom store
-                store_key = (layer_idx, int(dst_idx))
-                self.compressed_blocks_store[store_key] = {
-                    'data': cpu_compressed,
-                    'original_size': _src_cache.numel(),
-                    'shape': _src_cache.shape,
-                    'actual_eb': actual_eb
-                }
-                
-                # Update statistics
-                self.compressor.stats["bytes_original"] += _src_cache.numel() * _src_cache.element_size()
-                self.compressor.stats["bytes_compressed"] += actual_size
-                self.compressor.stats["swap_out_count"] += 1
+
+            # Determine sensitivity category for this layer
+            if self.scheduler is not None:
+                sensitivity = self.scheduler.layer_sensitivity.get(layer_idx, "deep")
+            else:
+                sensitivity = "deep"
+
+            store_key = (layer_idx, int(dst_idx))
+            self.compressed_blocks_store[store_key] = {
+                'data': cpu_compressed,
+                'original_size': _src_cache.numel(),
+                'shape': _src_cache.shape,
+                'actual_eb': actual_eb,
+                'sensitivity': sensitivity,
+                'arrival_ts': time.time(),
+            }
+
+            # Update statistics
+            self.compressor.stats["bytes_original"] += _src_cache.numel() * _src_cache.element_size()
+            self.compressor.stats["bytes_compressed"] += actual_size
+            self.compressor.stats["swap_out_count"] += 1
                 
     def _swap_in_blocks_from_host_patched(self, src_cache, dst_cache, src_block_indices, dst_block_indices):
-        """Patched swap_in_blocks_from_host method"""
+        """Patched swap_in_blocks_from_host method with prioritized async decompression.
+
+        Strategy:
+        - Collect requested blocks and sort by sensitivity (shallow first).
+        - For `shallow` blocks: perform H2D + decompress on a dedicated stream and
+          synchronize before returning (ensures low TTFT for critical layers).
+        - For `mid`/`deep` blocks: launch H2D + decompress asynchronously and
+          record a CUDA event; these complete in background.
+        """
         num_blocks = len(src_block_indices)
         if num_blocks == 0:
             return
-            
+
+        # Build task list for all requested blocks
+        tasks = []  # each task: dict with keys below
         for i, (src_idx, dst_idx) in enumerate(zip(src_block_indices, dst_block_indices)):
             for layer_idx in range(len(dst_cache)):
                 store_key = (layer_idx, int(src_idx))
-                
-                # Check if we have compressed data for this block
-                if store_key in self.compressed_blocks_store:
-                    block_info = self.compressed_blocks_store[store_key]
-                    compressed_cpu = block_info['data']
-                    original_size = block_info['original_size']
-                    
-                    # Transfer to GPU
-                    compressed_gpu = compressed_cpu.cuda(non_blocking=True)
-                    
-                    # Target buffer
-                    _dst_cache = dst_cache[layer_idx][dst_idx]
-                    
-                    # Decompress
-                    success = self.compressor.compressor.decompress(
-                        compressed_gpu,
-                        len(compressed_gpu),  # Compressed size
-                        _dst_cache,
-                        block_info['actual_eb'] # Actual error bound
-                    )
-                    
-                    if not success:
-                        logger.warning("Decompression failed, falling back to uncompressed swap")
-                        self._swap_in_blocks_from_host_original(
-                            src_cache, dst_cache, src_block_indices, dst_block_indices
-                        )
-                        return
-                        
-                    # Update statistics
-                    self.compressor.stats["swap_in_count"] += 1
-                else:
-                    # Fallback if block wasn't compressed (e.g., from an earlier session)
-                    self._swap_in_blocks_from_host_original(
-                        src_cache, dst_cache, [src_idx], [dst_idx]
-                    )
+                if store_key not in self.compressed_blocks_store:
+                    # If any requested block missing, fallback to original behavior for this pair
+                    self._swap_in_blocks_from_host_original(src_cache, dst_cache, [src_idx], [dst_idx])
+                    return
+
+                block_info = self.compressed_blocks_store[store_key]
+                compressed_cpu = block_info['data']
+                compressed_size = int(compressed_cpu.numel()) if hasattr(compressed_cpu, 'numel') else int(len(compressed_cpu))
+                sensitivity = block_info.get('sensitivity', 'deep')
+
+                tasks.append({
+                    'store_key': store_key,
+                    'layer_idx': layer_idx,
+                    'dst_idx': dst_idx,
+                    'compressed_cpu': compressed_cpu,
+                    'compressed_size': compressed_size,
+                    'actual_eb': block_info['actual_eb'],
+                    'sensitivity': sensitivity,
+                    'dst_tensor': dst_cache[layer_idx][dst_idx],
+                    'meta': block_info,
+                })
+
+        # Sort by sensitivity: shallow -> mid -> deep
+        priority = {'shallow': 0, 'mid': 1, 'deep': 2}
+        tasks.sort(key=lambda t: priority.get(t['sensitivity'], 2))
+
+        # Launch decompression tasks. Shallow blocks are synchronized before return.
+        for task in tasks:
+            sens = task['sensitivity']
+            # Create/get stream for this sensitivity class
+            stream = self._decompression_streams.get(sens)
+            if stream is None:
+                stream = torch.cuda.Stream()
+                self._decompression_streams[sens] = stream
+
+            dst_tensor = task['dst_tensor']
+            dev = dst_tensor.device
+
+            with torch.cuda.stream(stream):
+                # Asynchronous H2D from pinned host memory
+                try:
+                    compressed_gpu = task['compressed_cpu'].to(device=dev, non_blocking=True)
+                except Exception:
+                    # Fallback: cuda() call
+                    compressed_gpu = task['compressed_cpu'].cuda(non_blocking=True)
+
+                # Decompress on the selected stream (pybind uses current CUDA stream)
+                success = self.compressor.compressor.decompress(
+                    compressed_gpu,
+                    task['compressed_size'],
+                    dst_tensor,
+                    task['actual_eb']
+                )
+
+                if not success:
+                    logger.warning("Decompression failed for %s; falling back to original swap_in", task['store_key'])
+                    self._swap_in_blocks_from_host_original(src_cache, dst_cache, [task['store_key'][1]], [task['dst_idx']])
+                    return
+
+                # Record completion event
+                ev = torch.cuda.Event()
+                ev.record(stream)
+                # Save event handle for possible later synchronization
+                self.compressed_blocks_store[task['store_key']]['decompress_event'] = ev
+
+            # If this is a shallow (critical) block, wait for completion before returning
+            if sens == 'shallow':
+                ev.synchronize()
+                # Optionally free host-side compressed buffer after completion
+                try:
+                    del self.compressed_blocks_store[task['store_key']]['data']
+                except Exception:
+                    pass
+                self.compressor.stats['swap_in_count'] += 1
+            else:
+                # For mid/deep: launched in background; update counter and continue
+                self.compressor.stats['swap_in_count'] += 1
 
 # Example usage function
-def setup_vllm_compression(engine, error_bound=1e-4):
+def setup_vllm_compression(engine, error_bound=1e-4, enable_adaptive: bool = False, low_threshold_bytes: int = 32 * 1024 * 1024, high_threshold_bytes: int = 128 * 1024 * 1024):
     """
     Helper function to set up compression in an existing vLLM engine
     """
     try:
         compressor = CuSZpCompressor(error_bound=error_bound)
-        patcher = CompressedCacheEngineMonkeyPatch(engine.cache_engine, compressor)
+        # Optionally enable adaptive scheduler. If enabled but no explicit scheduler
+        # is provided, the patcher will auto-infer a per-layer sensitivity map
+        # on first use based on the observed number of layers.
+        scheduler = None
+        patcher = CompressedCacheEngineMonkeyPatch(
+            engine.cache_engine,
+            compressor,
+            scheduler=scheduler,
+            enable_auto_layer_infer=enable_adaptive,
+            low_threshold_bytes=low_threshold_bytes,
+            high_threshold_bytes=high_threshold_bytes,
+        )
         patcher.patch()
         return patcher
     except Exception as e:

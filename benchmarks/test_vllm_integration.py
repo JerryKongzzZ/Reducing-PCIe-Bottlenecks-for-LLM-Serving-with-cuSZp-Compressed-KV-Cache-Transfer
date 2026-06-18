@@ -14,7 +14,15 @@ if pipeline_dir not in sys.path:
     sys.path.insert(0, pipeline_dir)
 
 from compressed_swap import setup_vllm_compression, CuSZpCompressor
+import argparse
+import json
 
+
+from compressed_swap import CompressedCacheEngineMonkeyPatch
+try:
+    from adaptive_scheduler import PCIEAdaptiveScheduler
+except Exception:
+    PCIEAdaptiveScheduler = None
 # Mock vLLM Engine wrapper
 class MockVLLMEngine:
     def __init__(self):
@@ -69,9 +77,28 @@ def test_vllm_patch():
     src_indices = [0, 1]
     dst_indices = [0, 1]
     engine.cache_engine._swap_out_blocks_to_host(engine.cache_engine.gpu_cache, engine.cache_engine.cpu_cache, src_indices, dst_indices)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--enable-adaptive", action="store_true", help="Enable adaptive scheduler")
+    parser.add_argument("--layer-sensitivity", type=str, default=None, help="Path to layer_sensitivity.json")
+    args = parser.parse_args()
     
     print("\nApplying cuSZp Compression Monkey Patch to vLLM CacheEngine...")
-    patcher = setup_vllm_compression(engine, error_bound=1e-4)
+    # Select patcher configuration based on CLI args
+    patcher = None
+    if args.enable_adaptive and args.layer_sensitivity and PCIEAdaptiveScheduler is not None:
+        try:
+            with open(args.layer_sensitivity, 'r') as fh:
+                layer_map = json.load(fh)
+            scheduler = PCIEAdaptiveScheduler(layer_map)
+            compressor = CuSZpCompressor(error_bound=1e-4)
+            patcher = CompressedCacheEngineMonkeyPatch(engine.cache_engine, compressor, scheduler=scheduler, enable_auto_layer_infer=False)
+            patcher.patch()
+        except Exception as e:
+            print(f"Failed to load scheduler from {args.layer_sensitivity}: {e}")
+            patcher = setup_vllm_compression(engine, error_bound=1e-4, enable_adaptive=args.enable_adaptive)
+    else:
+        patcher = setup_vllm_compression(engine, error_bound=1e-4, enable_adaptive=args.enable_adaptive)
+
     if not patcher:
         print("Failed to patch vLLM. Make sure C++ extension is compiled.")
         return
@@ -98,6 +125,7 @@ def test_vllm_patch():
     print(f"Recovered value (Expected ~1.234): {val:.4f}")
     
     print("\n✅ vLLM CacheEngine Monkey Patch integration successfully verified!")
+    # End of test
 
 if __name__ == "__main__":
     test_vllm_patch()

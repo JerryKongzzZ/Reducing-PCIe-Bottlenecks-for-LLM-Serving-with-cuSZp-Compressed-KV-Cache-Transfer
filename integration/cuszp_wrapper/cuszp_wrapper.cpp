@@ -23,6 +23,7 @@ bool CuSZpWrapper::compress(
     torch::Tensor& compressed_buffer,
     size_t& compressed_size,
     float& actual_error_bound,
+    float eps_override,
     cudaStream_t stream) {
     
     if (!input_tensor.is_cuda()) {
@@ -43,14 +44,17 @@ bool CuSZpWrapper::compress(
     
     unsigned char* d_compressed = compressed_buffer.data_ptr<unsigned char>();
     
+    // Determine per-call eps to use (eps_override > 0 means override)
+    float eps_to_use = (eps_override > 0.0f) ? eps_override : config_.error_bound;
+
     // Dynamically calculate error bound based on true min/max of tensor
-    actual_error_bound = config_.error_bound;
+    actual_error_bound = eps_to_use;
     if (config_.use_relative_error) {
         float min_val = input_tensor.min().item<float>();
         float max_val = input_tensor.max().item<float>();
         float range_estimate = max_val - min_val;
         if (range_estimate < 1e-6f) range_estimate = 1e-6f; // Prevent near-zero range
-        actual_error_bound = config_.error_bound * range_estimate;
+        actual_error_bound = eps_to_use * range_estimate;
     }
     
     uint3 dims = get_tensor_dims(input_tensor);
