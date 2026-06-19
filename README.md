@@ -143,11 +143,3 @@ git update-index --chmod=+x test.sh
 git update-index --chmod=+x docker/run.sh
 git commit -m "chore: lock executable permissions"
 ```
-
----
-
-## 🎓 Legacy Project Documentation (FYP 2026)
-This project originated as a Capstone Project (FYP 2026) at The Hong Kong Polytechnic University by KONG Zirui (22103493D).
-* **Final Report**: [documents/final_report/Capstone_Project_2026_Final_Report_KONG_Zirui_22103493D.pdf](documents/final_report/Capstone_Project_2026_Final_Report_KONG_Zirui_22103493D.pdf)
-* **Interim Report**: [documents/interim_report/FYP_2026_Interim_Report.pdf](documents/interim_report/FYP_2026_Interim_Report.pdf)
-* **Initial Proposal**: [documents/project_proposal/Compress_Transfer_Decompress_for_LLM_Serving__cuSZp_Enabled_CPU_GPU_Data_Pipeline_in_vLLM.pdf](documents/project_proposal/Compress_Transfer_Decompress_for_LLM_Serving__cuSZp_Enabled_CPU_GPU_Data_Pipeline_in_vLLM.pdf)

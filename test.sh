@@ -6,7 +6,7 @@ set -e
 WORKSPACE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "=========================================="
-echo "🚀 [1/3] Automatically compiling cuSZp C++ core extension..."
+echo "🚀 [1/7] Automatically compiling cuSZp C++ core extension..."
 echo "=========================================="
 # Enter the build directory
 cd "$WORKSPACE_ROOT/integration/cuszp_wrapper"
@@ -23,7 +23,7 @@ echo "✅ C++ extension compilation completed!"
 echo ""
 
 echo "=========================================="
-echo "📊 [2/3] Running Unified Benchmark Pipeline for all models..."
+echo "📊 [2/7] Running Unified Benchmark Pipeline for all models..."
 echo "=========================================="
 cd "$WORKSPACE_ROOT"
 # Automatically inject module path and run unified test
@@ -31,12 +31,40 @@ PYTHONPATH=integration/compression_pipeline python3 benchmarks/benchmark_pipelin
 echo ""
 
 echo "=========================================="
-echo "🔌 [3/3] Testing vLLM CacheEngine Monkey Patch Integration..."
+echo "🎯 [3/7] Generating Offline Layer Sensitivity Profile..."
+echo "=========================================="
+cd "$WORKSPACE_ROOT"
+PYTHONPATH=integration/compression_pipeline python3 benchmarks/layer_sensitivity_sweep.py --model gpt2 --out data/layer_sensitivity.json --eps 1e-5 1e-4 1e-3 1e-2
+echo ""
+
+echo "=========================================="
+echo "📈 [4/7] End-to-End Policy Evaluation (Adaptive vs Static)..."
+echo "=========================================="
+cd "$WORKSPACE_ROOT"
+PYTHONPATH=integration/compression_pipeline python3 benchmarks/evaluate_policies.py --models gpt2 --out data/eval_summary.json
+echo ""
+
+echo "=========================================="
+echo "🖼️ [5/7] Generating Paper Figures (Pareto, Queue, Ablation)..."
+echo "=========================================="
+cd "$WORKSPACE_ROOT"
+PYTHONPATH=integration/compression_pipeline python3 benchmarks/run_pareto_queue_ablation.py
+echo ""
+
+echo "=========================================="
+echo "🔌 [6/7] Testing vLLM CacheEngine Monkey Patch Integration..."
 echo "=========================================="
 cd "$WORKSPACE_ROOT"
 python3 benchmarks/test_vllm_integration.py
 echo ""
 
 echo "=========================================="
-echo "🎉 Congratulations! All Benchmark tests have been executed successfully!"
-echo "📂 The test results have been successfully saved to .json files."
+echo "📊 [7/7] Generating Summary Plots..."
+echo "=========================================="
+cd "$WORKSPACE_ROOT"
+python3 benchmarks/plot_summary.py
+echo ""
+
+echo "=========================================="
+echo "🎉 Congratulations! All tests and artifact generation have been executed successfully!"
+echo "📂 The test results and figures have been successfully saved to the data/ folder."
