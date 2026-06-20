@@ -117,30 +117,42 @@ def main():
     )
     compressor = cuszp_wrapper_cpp.CuSZpWrapper(config, args.device)
 
-    num_layers = len(orig_past)
+    num_layers = len(orig_past) if not hasattr(orig_past, "key_cache") else len(orig_past.key_cache)
     results = {}
 
     for layer_idx in range(num_layers):
         print(f"Profiling layer {layer_idx}/{num_layers - 1}")
         scores = []
         for eps in args.eps:
-            # Copy past_key_values and replace layer layer_idx with compressed/decompressed tensors
-            past_copy = list(list(x) for x in orig_past)
-
-            # Each past element is a tuple (k, v)
-            k_tensor = past_copy[layer_idx][0].detach().clone().to(device)
-            v_tensor = past_copy[layer_idx][1].detach().clone().to(device)
+            if hasattr(orig_past, "key_cache"):
+                k_tensor = orig_past.key_cache[layer_idx].detach().clone().to(device)
+                v_tensor = orig_past.value_cache[layer_idx].detach().clone().to(device)
+            else:
+                k_tensor = orig_past[layer_idx][0].detach().clone().to(device)
+                v_tensor = orig_past[layer_idx][1].detach().clone().to(device)
 
             # compress+decompress keys and values separately
             k_decomp, kt_comp, kt_decomp_time, k_size, k_actual_eb = compress_and_decompress_tensor(compressor, k_tensor, eps)
             v_decomp, vt_comp, vt_decomp_time, v_size, v_actual_eb = compress_and_decompress_tensor(compressor, v_tensor, eps)
 
             # place back
-            past_copy[layer_idx][0] = k_decomp
-            past_copy[layer_idx][1] = v_decomp
-
-            # Convert nested list back to tuple of tuples expected by model
-            past_tuple = tuple(tuple(x) for x in past_copy)
+            if hasattr(orig_past, "key_cache"):
+                from transformers.cache_utils import DynamicCache
+                past_tuple = DynamicCache()
+                if hasattr(orig_past, "_seen_tokens"):
+                    past_tuple._seen_tokens = orig_past._seen_tokens
+                for i in range(num_layers):
+                    if i == layer_idx:
+                        past_tuple.key_cache.append(k_decomp)
+                        past_tuple.value_cache.append(v_decomp)
+                    else:
+                        past_tuple.key_cache.append(orig_past.key_cache[i])
+                        past_tuple.value_cache.append(orig_past.value_cache[i])
+            else:
+                past_copy = list(list(x) for x in orig_past)
+                past_copy[layer_idx][0] = k_decomp
+                past_copy[layer_idx][1] = v_decomp
+                past_tuple = tuple(tuple(x) for x in past_copy)
 
             # Run model forward for the target token with modified past
             with torch.no_grad():
