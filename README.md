@@ -1,13 +1,13 @@
-# Memory Wall is a Network Problem: Congestion-Aware KV Cache Swapping for High-Throughput LLM Serving
+# Artifact Evaluation: Congestion-Aware KV Cache Swapping for High-Throughput LLM Serving
 
-## 🌟 Project Overview
-This project proposes a novel system design targeting the **CPU-GPU PCIe Memory Wall** during large language model (LLM) serving. By modeling the PCIe bus as a bandwidth-constrained network link and KV Cache swapping as traffic flows with varying Quality-of-Service (QoS) requirements, we introduce a **Congestion-Aware Adaptive Lossy Compression Scheduler**.
+This repository contains the source code, microbenchmarks, and artifact evaluation scripts for our system submitted to top-tier networking/systems conferences (e.g., INFOCOM).
 
-This system dynamically balances PCIe communication overhead and model inference accuracy. Under high-concurrency (burst) traffic, it automatically sacrifices precision in less-sensitive deep network layers to instantly clear the PCIe queue, effectively preventing congestion storms and achieving Pareto-optimal end-to-end latency and throughput. 
+Our system addresses the **CPU-GPU PCIe Memory Wall** in LLM serving. By modeling the PCIe bus as a bandwidth-constrained network link and KV Cache swapping as traffic flows with varying QoS requirements, we introduce a **Congestion-Aware Adaptive Lossy Compression Scheduler**. Under high-concurrency (burst) traffic, it automatically sacrifices precision in less-sensitive deep network layers to instantly clear the PCIe queue, preventing congestion storms and achieving Pareto-optimal latency and throughput.
 
-This repository contains the full source code, benchmark suites, and plotting scripts intended for **Artifact Evaluation at top-tier networking and systems conferences (e.g., INFOCOM, OSDI, SIGCOMM)**. It seamlessly integrates the **cuSZp** error-bounded lossy compression framework into the **vLLM** engine, targeting performance gains on high-bandwidth hardware like the **RTX 5080**.
+---
 
-### 🏗️ System Architecture
+## 🏗️ System Architecture
+
 Our system consists of three decoupled modules:
 1. **Bottom-Level Engine (`integration/cuszp_wrapper/`)**: A PyBind11 C++ wrapper over `cuSZp` that intercepts PyTorch's native CUDA streams to perform non-blocking concurrent compression without CPU syncs.
 2. **vLLM Hijack Layer (`integration/compression_pipeline/compressed_swap.py`)**: A zero-intrusion monkey-patch for vLLM's `CacheEngine`, dynamically intercepting `_swap_in` and `_swap_out` to introduce independent metadata stores and prioritized asynchronous decompression.
@@ -15,97 +15,104 @@ Our system consists of three decoupled modules:
 
 ---
 
-## 📁 Project Structure
-```text
-PolyU_COMP_Final_Year_Project_2026_Spring/
-├── benchmarks/               # Experimental scripts and artifact evaluation
-│   ├── benchmark_pipeline.py         # Microbenchmarks across 8 models
-│   ├── layer_sensitivity_sweep.py    # Offline profiling for layer sensitivity
-│   ├── evaluate_policies.py          # End-to-end policy evaluation (Adaptive vs Static)
-│   ├── run_pareto_queue_ablation.py  # Generates paper-ready figures (Pareto, Queue, Ablation)
-│   └── test_vllm_integration.py      # Monkey-patch validation
-├── data/                     # Output directory for `.json` results and `figures/`
-├── docker/                   # Docker infrastructure (Dockerfile, run.sh)
-├── integration/              # Core source code (C++/Python bindings)
-│   ├── compression_pipeline/         # Python hook & Adaptive Scheduler for vLLM
-│   └── cuszp_wrapper/                # cuSZp PyBind11 C++ Wrapper
-├── documents/                # Legacy FYP documents (Proposal, Interim, Final Report)
-├── requirements.txt          # Python dependencies
-├── test.sh                   # Root Automation Script (Builds & Microbenchmarks)
-└── README.md                 # Artifact Evaluation Guide
-```
+## 🛠️ Hardware & Software Requirements
+
+- **OS**: Linux (Ubuntu 20.04/22.04) or WSL2
+- **GPU**: NVIDIA GPU (Tested on RTX 5080) with CUDA 12.x support
+- **CPU-GPU Interconnect**: PCIe Gen 4.0 or 5.0
+- **Software**: Python 3.10+, CMake 3.18+, GCC 11+
 
 ---
 
-## 🎯 Artifact Evaluation & Execution Guide
+## 🚀 Getting Started (Environment Setup)
 
-To reproduce the experimental results presented in the paper, we provide an automated pipeline. You can run this project in two ways: **via Docker** (Recommended for pure evaluation) or **Natively on Linux/WSL2** (Recommended for development).
+We provide instructions to set up the environment natively on Linux or WSL2. Ensure you have the CUDA Toolkit installed before proceeding.
 
-### 1. Environment Setup
-
-**Option A: Run via Docker (Recommended)**
-Docker handles the complex CUDA and PyTorch dependencies automatically.
 ```bash
-chmod +x test.sh docker/run.sh
-sed -i 's/\r$//' test.sh docker/run.sh docker/Dockerfile
-cd docker
-./run.sh build  # Builds the image with cuSZp and dependencies
-```
+# 1. Install system dependencies
+sudo apt-get update && sudo apt-get install -y git cmake build-essential python3.10-dev python3-venv
 
-**Option B: Run Natively (Linux / WSL2)**
-*Requires `cmake` (3.18+), `gcc/g++` (11+), and the CUDA Toolkit.*
-```bash
-# 1. Install cuSZp Core Library globally
+# 2. Compile and install cuSZp core library globally
 sudo git clone https://github.com/szcompressor/cuSZp.git /opt/cuSZp
 cd /opt/cuSZp && sudo mkdir -p build && cd build
 sudo cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../install/ ..
 sudo make -j$(nproc) && sudo make install
+cd -
 
-# 2. Setup Python environment
-cd /path/to/project
+# 3. Setup Python virtual environment
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Reproducing Paper Experiments
+---
 
-We provide push-button scripts to generate all tables and figures used in the paper.
+## 🧪 Detailed Evaluation Instructions
 
-**Step 1: Microbenchmarks (Table Generation)**
-This script automatically compiles the C++ PyBind11 wrapper, generates real KV cache tensors for 8 state-of-the-art models, profiles the baseline PCIe transfer latency, executes the cuSZp compression + transfer simulation, and calculates effective speedups.
+This section guides you through reproducing the core claims of our paper.
+
+### Claim 1: cuSZp Compression dramatically improves Effective PCIe Bandwidth
+We extract actual Layer-0 KV cache embeddings from 8 state-of-the-art models via HuggingFace and benchmark the physical PCIe transfer time vs. our compressed transfer time.
+
+**How to reproduce:**
 ```bash
-# If using Docker:
-./docker/run.sh test
-# If running natively:
 ./test.sh
 ```
-*Output: Detailed bandwidth/latency json files saved in `data/`.*
+**Expected Outcome:** 
+The script will compile the C++ PyBind11 wrapper and profile the baseline PCIe transfer latency against the cuSZp compression + transfer simulation. A summary table will be printed to the console, and detailed `.json` logs will be saved in the `data/` directory. You should observe ~1.5x - 2.0x effective bandwidth speedups across all 8 models.
 
-**Step 2: Generate Offline Layer Sensitivity Profile**
-Profiles the KL-divergence of compressing individual Transformer layers to build the sensitivity map.
+### Claim 2: Deep Transformer Layers are robust to high-ratio Lossy Compression
+We profile the KL-divergence of compressing individual Transformer layers to build an offline sensitivity map.
+
+**How to reproduce:**
 ```bash
-PYTHONPATH=integration/compression_pipeline python3 benchmarks/layer_sensitivity_sweep.py --model gpt2 --out data/layer_sensitivity.json --eps 1e-5 1e-4 1e-3 1e-2
+# Generate the layer sensitivity map for GPT-2
+PYTHONPATH=integration/compression_pipeline python3 benchmarks/layer_sensitivity_sweep.py \
+    --model gpt2 --out data/layer_sensitivity.json --eps 1e-5 1e-4 1e-3 1e-2
 ```
+**Expected Outcome:** 
+A `layer_sensitivity.json` file is generated in the `data/` folder, classifying layers into `shallow`, `mid`, and `deep` categories based on their tolerance to compression errors.
 
-**Step 3: End-to-End Evaluation & Generating Paper Figures**
-Evaluates the full adaptive system against baselines (Static cuSZp, Uncompressed vLLM) and plots the Pareto boundaries, queue depths, and ablation studies.
+### Claim 3: Adaptive Congestion-Aware Scheduling achieves Pareto-Optimality
+We evaluate the full adaptive system against baselines (Uncompressed, Static cuSZp, INT8, ZLIB) under varying PCIe queue depths.
+
+**How to reproduce:**
 ```bash
-PYTHONPATH=integration/compression_pipeline python3 benchmarks/evaluate_policies.py --models gpt2 --out data/eval_summary.json
+# Run the end-to-end policy evaluation
+PYTHONPATH=integration/compression_pipeline python3 benchmarks/evaluate_policies.py \
+    --models gpt2 --out data/eval_summary.json
 
-# Generate INFOCOM/Top-Tier conference specific evaluation plots (Pareto, Queue Depth, Ablation)
+# Generate the paper figures (Pareto Boundary, Queue Waterfall, Ablation)
 python3 benchmarks/run_pareto_queue_ablation.py
 ```
-*Output: `pareto_boundary.png`, `queue_depth_waterfall.png`, and `ablation_study.png` will be saved in `data/figures/`.*
+**Expected Outcome:** 
+The script generates three plots in the `data/figures/` directory:
+1. `pareto_boundary.png`: Shows our adaptive scheduler maintaining high accuracy while achieving maximum throughput.
+2. `queue_depth_waterfall.png`: Demonstrates how the `RED` congestion state instantly drains pending PCIe volume during burst traffic.
+3. `ablation_study.png`: Highlights the latency (TTFT) reduction contributed by our asynchronous decompression pipeline.
 
-### 3. API Usage: Enabling the Scheduler in vLLM
-Our integration exposes a zero-intrusion monkey-patch for vLLM. It can be initialized in a few lines of code:
+---
+
+## 💻 API Usage: Enabling the Scheduler in vLLM
+
+To integrate our system into an existing vLLM deployment, simply apply our zero-intrusion monkey-patch before engine execution:
+
 ```python
 from integration.compression_pipeline.compressed_swap import setup_vllm_compression
+import vllm
 
-# Inside your vLLM engine initialization code:
-# enable_adaptive=True turns on automatic per-layer sensitivity inference and PCIe queue monitoring
+# Initialize your vLLM engine
+engine = vllm.LLMEngine(...)
+
+# Apply the Congestion-Aware Monkey Patch
+# enable_adaptive=True enables dynamic queue monitoring and GREEN/YELLOW/RED state shifts
 patcher = setup_vllm_compression(engine, error_bound=1e-4, enable_adaptive=True)
+
+# Run your inference workload...
+
+# To safely remove the patch:
+patcher.unpatch()
 ```
+<<<<<<< Updated upstream
 
 ---
 
@@ -143,3 +150,5 @@ git update-index --chmod=+x test.sh
 git update-index --chmod=+x docker/run.sh
 git commit -m "chore: lock executable permissions"
 ```
+=======
+>>>>>>> Stashed changes
