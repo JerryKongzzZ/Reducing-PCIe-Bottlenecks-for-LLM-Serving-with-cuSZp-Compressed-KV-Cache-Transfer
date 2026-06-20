@@ -34,8 +34,11 @@ def generate_kv_cache(model_id, target_size=4194304):
         outputs = model(**inputs, use_cache=True)
 
     past_key_values = outputs.past_key_values
-    if hasattr(past_key_values, "key_cache"):
-        layer_0_key = past_key_values.key_cache[0]
+    if type(past_key_values).__name__ == "DynamicCache" or hasattr(past_key_values, "key_cache"):
+        if hasattr(past_key_values, "key_cache"):
+            layer_0_key = past_key_values.key_cache[0]
+        else:
+            layer_0_key = list(past_key_values)[0][0]
     else:
         layer_0_key = past_key_values[0][0]
     kv_tensor = layer_0_key.to(torch.float32).contiguous().view(-1)

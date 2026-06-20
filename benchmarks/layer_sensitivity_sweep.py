@@ -118,15 +118,21 @@ def main():
     compressor = cuszp_wrapper_cpp.CuSZpWrapper(config, args.device)
 
     num_layers = len(orig_past) if not hasattr(orig_past, "key_cache") else len(orig_past.key_cache)
+    if type(orig_past).__name__ == "DynamicCache" and not hasattr(orig_past, "key_cache"):
+        num_layers = len(list(orig_past))
     results = {}
 
     for layer_idx in range(num_layers):
         print(f"Profiling layer {layer_idx}/{num_layers - 1}")
         scores = []
         for eps in args.eps:
-            if hasattr(orig_past, "key_cache"):
-                k_tensor = orig_past.key_cache[layer_idx].detach().clone().to(device)
-                v_tensor = orig_past.value_cache[layer_idx].detach().clone().to(device)
+            if type(orig_past).__name__ == "DynamicCache" or hasattr(orig_past, "key_cache"):
+                if hasattr(orig_past, "key_cache"):
+                    k_tensor = orig_past.key_cache[layer_idx].detach().clone().to(device)
+                    v_tensor = orig_past.value_cache[layer_idx].detach().clone().to(device)
+                else:
+                    k_tensor = list(orig_past)[layer_idx][0].detach().clone().to(device)
+                    v_tensor = list(orig_past)[layer_idx][1].detach().clone().to(device)
             else:
                 k_tensor = orig_past[layer_idx][0].detach().clone().to(device)
                 v_tensor = orig_past[layer_idx][1].detach().clone().to(device)
@@ -136,18 +142,19 @@ def main():
             v_decomp, vt_comp, vt_decomp_time, v_size, v_actual_eb = compress_and_decompress_tensor(compressor, v_tensor, eps)
 
             # place back
-            if hasattr(orig_past, "key_cache"):
+            if type(orig_past).__name__ == "DynamicCache" or hasattr(orig_past, "key_cache"):
                 from transformers.cache_utils import DynamicCache
                 past_tuple = DynamicCache()
                 if hasattr(orig_past, "_seen_tokens"):
                     past_tuple._seen_tokens = orig_past._seen_tokens
                 for i in range(num_layers):
                     if i == layer_idx:
-                        past_tuple.key_cache.append(k_decomp)
-                        past_tuple.value_cache.append(v_decomp)
+                        past_tuple.update(k_decomp, v_decomp, layer_idx=i)
                     else:
-                        past_tuple.key_cache.append(orig_past.key_cache[i])
-                        past_tuple.value_cache.append(orig_past.value_cache[i])
+                        if hasattr(orig_past, "key_cache"):
+                            past_tuple.update(orig_past.key_cache[i], orig_past.value_cache[i], layer_idx=i)
+                        else:
+                            past_tuple.update(list(orig_past)[i][0], list(orig_past)[i][1], layer_idx=i)
             else:
                 past_copy = list(list(x) for x in orig_past)
                 past_copy[layer_idx][0] = k_decomp
