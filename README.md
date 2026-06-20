@@ -112,7 +112,6 @@ patcher = setup_vllm_compression(engine, error_bound=1e-4, enable_adaptive=True)
 # To safely remove the patch:
 patcher.unpatch()
 ```
-<<<<<<< Updated upstream
 
 ---
 
@@ -150,5 +149,3 @@ git update-index --chmod=+x test.sh
 git update-index --chmod=+x docker/run.sh
 git commit -m "chore: lock executable permissions"
 ```
-=======
->>>>>>> Stashed changes
