@@ -20,7 +20,7 @@ Our system consists of three decoupled modules:
 - **OS**: Linux (Ubuntu 20.04/22.04) or WSL2
 - **GPU**: NVIDIA GPU (Tested on RTX 5080) with CUDA 12.x support
 - **CPU-GPU Interconnect**: PCIe Gen 4.0 or 5.0
-- **Software**: Python 3.10+, CMake 3.18+, GCC 11+
+- **Software**: Python 3.12+, CMake 3.18+, GCC 11+
 
 ---
 
@@ -30,7 +30,7 @@ We provide instructions to set up the environment natively on Linux or WSL2. Ens
 
 ```bash
 # 1. Install system dependencies
-sudo apt-get update && sudo apt-get install -y git cmake build-essential python3.10-dev python3-venv
+sudo apt-get update && sudo apt-get install -y git cmake build-essential python3.12-dev python3.12-venv
 
 # 2. Compile and install cuSZp core library globally
 sudo git clone https://github.com/szcompressor/cuSZp.git /opt/cuSZp
