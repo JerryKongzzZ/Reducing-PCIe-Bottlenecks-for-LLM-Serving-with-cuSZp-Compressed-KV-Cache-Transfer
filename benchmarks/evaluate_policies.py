@@ -72,9 +72,10 @@ def simulate_adaptive_on_flat_tensor(tensor: torch.Tensor, compressor, scheduler
         end = n if i == num_slices - 1 else (i + 1) * slice_len
         view = tensor.view(-1)[start:end].contiguous().to(torch.device(f"cuda:{device_id}"))
         # Map slice index to sensitivity category via round-robin of policy keys if necessary
-        idx = i % len(scheduler_policy)
+        categories = list(scheduler_policy.keys())
+        idx = i % len(categories)
         # scheduler_policy is an ordered list of categories (e.g., ['shallow','mid','deep']) -> pick eps per category
-        cat = scheduler_policy[idx]
+        cat = categories[idx]
         eps = scheduler_policy[cat]
         estimated_size = cuszp_wrapper_cpp.CuSZpWrapper.estimate_compressed_buffer_size(view.numel() * view.element_size())
         compressed_buffer = torch.empty(estimated_size, dtype=torch.uint8, device=view.device)
