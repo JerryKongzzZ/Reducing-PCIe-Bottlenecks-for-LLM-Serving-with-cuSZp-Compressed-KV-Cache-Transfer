@@ -2,6 +2,9 @@
 # Stop execution immediately if any command fails
 set -e 
 
+# Use HF mirror for faster model downloading
+export HF_ENDPOINT=https://hf-mirror.com
+
 # Get the directory of the current script as the workspace root
 WORKSPACE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
