@@ -11,6 +11,8 @@ from typing import Dict, List, Tuple, Optional
 import sys
 import os
 import time
+import zlib
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -43,31 +45,35 @@ class CuSZpCompressor:
         encoding_mode: str = "plain",
         device_id: int = 0
     ):
-        if cuszp_wrapper_cpp is None:
-            raise RuntimeError("cuszp_wrapper_cpp is not available")
-            
         self.error_bound = error_bound
         self.device_id = device_id
-        
+
         # Parse encoding mode
-        mode = cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN
-        if encoding_mode.lower() == "fixed":
-            mode = cuszp_wrapper_cpp.CuszpMode.MODE_FIXED
-        elif encoding_mode.lower() == "outlier":
-            mode = cuszp_wrapper_cpp.CuszpMode.MODE_OUTLIER
-            
-        # Initialize configuration
-        self.config = cuszp_wrapper_cpp.CompressionConfig(
-            error_bound=error_bound,
-            use_relative_error=True,
-            processing_dim=cuszp_wrapper_cpp.CuszpDim.DIM_1D,
-            encoding_mode=mode,
-            data_type=cuszp_wrapper_cpp.CuszpType.TYPE_FLOAT
-        )
-        
-        # Initialize compressor
-        self.compressor = cuszp_wrapper_cpp.CuSZpWrapper(self.config, device_id)
-        
+        self.encoding_mode = encoding_mode.lower() if encoding_mode is not None else "plain"
+
+        # Attempt to initialize cuSZp if available
+        if cuszp_wrapper_cpp is not None:
+            mode = cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN
+            if self.encoding_mode == "fixed":
+                mode = cuszp_wrapper_cpp.CuszpMode.MODE_FIXED
+            elif self.encoding_mode == "outlier":
+                mode = cuszp_wrapper_cpp.CuszpMode.MODE_OUTLIER
+
+            # Initialize configuration
+            self.config = cuszp_wrapper_cpp.CompressionConfig(
+                error_bound=error_bound,
+                use_relative_error=True,
+                processing_dim=cuszp_wrapper_cpp.CuszpDim.DIM_1D,
+                encoding_mode=mode,
+                data_type=cuszp_wrapper_cpp.CuszpType.TYPE_FLOAT
+            )
+
+            # Initialize compressor
+            self.compressor = cuszp_wrapper_cpp.CuSZpWrapper(self.config, device_id)
+        else:
+            self.config = None
+            self.compressor = None
+
         # Performance counters
         self.stats = {
             "bytes_original": 0,
@@ -82,12 +88,48 @@ class CuSZpCompressor:
         Returns the same tuple as the pybind `compress` wrapper:
         (success: bool, compressed_buffer: Tensor, compressed_size: int, actual_error_bound: float)
         """
-        if cuszp_wrapper_cpp is None:
-            raise RuntimeError("cuszp_wrapper_cpp is not available")
+        # If cuSZp binding is available, use it
+        if self.compressor is not None:
+            return self.compressor.compress(input_tensor, compressed_buffer, float(eps_rel))
 
-        # Call compress via the pybind wrapper with per-call eps_override
-        # Binding exposed: compress(input_tensor, compressed_buffer, eps_override=-1.0)
-        return self.compressor.compress(input_tensor, compressed_buffer, float(eps_rel))
+        # Fallback: zlib-based compression on CPU
+        try:
+            # Move to CPU float32 contiguous
+            cpu = input_tensor.detach().cpu().contiguous().view(-1)
+            orig_bytes = cpu.numpy().tobytes()
+            comp_bytes = zlib.compress(orig_bytes)
+            comp_size = len(comp_bytes)
+
+            # Create CPU uint8 tensor containing compressed bytes
+            buf = torch.frombuffer(comp_bytes, dtype=torch.uint8).to(torch.device("cpu"))
+            actual_eb = float(eps_rel)
+
+            # Return (success, buffer, size, actual_eb)
+            return True, buf, comp_size, actual_eb
+        except Exception:
+            logger.exception("Fallback compression failed")
+            return False, compressed_buffer, 0, float(eps_rel)
+
+    def decompress(self, compressed_buffer, compressed_size, output_tensor, actual_error_bound):
+        """Decompress using cuSZp if available, otherwise fallback to zlib.
+
+        Returns True/False.
+        """
+        if self.compressor is not None:
+            return self.compressor.decompress(compressed_buffer, compressed_size, output_tensor, actual_error_bound)
+
+        try:
+            # compressed_buffer is a CPU uint8 tensor
+            data = bytes(compressed_buffer[:int(compressed_size)].cpu().numpy().tobytes())
+            decomp = zlib.decompress(data)
+            arr = np.frombuffer(decomp, dtype=np.float32)
+            # reshape to output_tensor numel
+            out = torch.from_numpy(arr).view_as(output_tensor).to(output_tensor.device)
+            output_tensor.copy_(out)
+            return True
+        except Exception:
+            logger.exception("Fallback decompression failed")
+            return False
         
     def get_compression_ratio(self) -> float:
         """Calculate average compression ratio"""
@@ -347,6 +389,7 @@ def setup_vllm_compression(engine, error_bound=1e-4, enable_adaptive: bool = Fal
         # is provided, the patcher will auto-infer a per-layer sensitivity map
         # on first use based on the observed number of layers.
         scheduler = None
+        # Apply the original CacheEngine monkey patch for backwards compatibility
         patcher = CompressedCacheEngineMonkeyPatch(
             engine.cache_engine,
             compressor,
@@ -356,6 +399,17 @@ def setup_vllm_compression(engine, error_bound=1e-4, enable_adaptive: bool = Fal
             high_threshold_bytes=high_threshold_bytes,
         )
         patcher.patch()
+
+        # Also patch vLLM's OffloadingWorker.register_handler to install
+        # a proxy handler that can later implement compression-aware
+        # transfers at the worker level.
+        try:
+            from integration.compression_pipeline.offloading_wrapper import patch_offloading_worker_register
+
+            patch_offloading_worker_register(compressor=compressor, scheduler=scheduler)
+        except Exception:
+            logger.exception("Failed to apply OffloadingWorker register patch")
+
         return patcher
     except Exception as e:
         logger.error(f"Failed to setup vLLM compression: {e}")

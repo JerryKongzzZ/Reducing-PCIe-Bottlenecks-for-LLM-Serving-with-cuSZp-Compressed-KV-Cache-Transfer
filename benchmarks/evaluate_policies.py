@@ -27,7 +27,8 @@ from benchmark_pipeline import generate_kv_cache, measure_baseline, measure_comp
 try:
     import cuszp_wrapper_cpp
 except Exception as e:
-    raise RuntimeError(f"cuszp_wrapper_cpp import failed: {e}")
+    cuszp_wrapper_cpp = None
+    print(f"cuSZp unavailable; falling back to zlib-based CPU compression: {e}", file=sys.stderr)
 
 
 def int8_quantize_dequantize(tensor: torch.Tensor):
@@ -70,11 +71,26 @@ def simulate_adaptive_on_flat_tensor(tensor: torch.Tensor, compressor, scheduler
     for i in range(num_slices):
         start = i * slice_len
         end = n if i == num_slices - 1 else (i + 1) * slice_len
-        view = tensor.view(-1)[start:end].contiguous().to(torch.device(f"cuda:{device_id}"))
-        # Map slice index to sensitivity category via round-robin of policy keys if necessary
+        view = tensor.view(-1)[start:end].contiguous()
+
+        if compressor is None or cuszp_wrapper_cpp is None:
+            t0 = time.perf_counter()
+            payload = view.detach().cpu().numpy().tobytes()
+            compressed_payload = zlib.compress(payload)
+            comp_t = time.perf_counter() - t0
+
+            t0 = time.perf_counter()
+            zlib.decompress(compressed_payload)
+            decomp_t = time.perf_counter() - t0
+
+            comp_total += len(compressed_payload)
+            comp_time_total += comp_t
+            decomp_time_total += decomp_t
+            continue
+
+        view = view.to(torch.device(f"cuda:{device_id}"))
         categories = list(scheduler_policy.keys())
         idx = i % len(categories)
-        # scheduler_policy is an ordered list of categories (e.g., ['shallow','mid','deep']) -> pick eps per category
         cat = categories[idx]
         eps = scheduler_policy[cat]
         estimated_size = cuszp_wrapper_cpp.CuSZpWrapper.estimate_compressed_buffer_size(view.numel() * view.element_size())
@@ -88,7 +104,6 @@ def simulate_adaptive_on_flat_tensor(tensor: torch.Tensor, compressor, scheduler
         if not success:
             raise RuntimeError('compress failed in simulate_adaptive_on_flat_tensor')
 
-        # decompress to measure cost
         decomp = torch.empty_like(view)
         torch.cuda.synchronize()
         t0 = time.perf_counter()
@@ -107,24 +122,30 @@ def simulate_adaptive_on_flat_tensor(tensor: torch.Tensor, compressor, scheduler
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--models', nargs='+', default=['gpt2'])
+    parser.add_argument('--models', nargs='+', default=["gpt2","Qwen/Qwen2.5-0.5B","Qwen/Qwen2.5-1.5B", "facebook/opt-125m","facebook/opt-350m", "EleutherAI/pythia-160m", "EleutherAI/pythia-410m", "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",])
     parser.add_argument('--out', type=str, default='data/eval_summary.json')
     parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--iterations', type=int, default=20)
+    parser.add_argument('--synthetic', action='store_true', help='Use a deterministic synthetic tensor instead of downloading Hugging Face models')
     args = parser.parse_args()
 
-    device = torch.device(f"cuda:{args.device}")
-    torch.cuda.set_device(device)
+    if torch.cuda.is_available():
+        device = torch.device(f"cuda:{args.device}")
+        torch.cuda.set_device(device)
+    else:
+        device = torch.device('cpu')
 
-    # Prepare cuSZp compressor with default config; we will use per-call eps override where needed
-    config = cuszp_wrapper_cpp.CompressionConfig(
-        error_bound=1e-4,
-        use_relative_error=True,
-        processing_dim=cuszp_wrapper_cpp.CuszpDim.DIM_1D,
-        encoding_mode=cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN,
-        data_type=cuszp_wrapper_cpp.CuszpType.TYPE_FLOAT
-    )
-    compressor = cuszp_wrapper_cpp.CuSZpWrapper(config, args.device)
+    compressor = None
+    if cuszp_wrapper_cpp is not None:
+        # Prepare cuSZp compressor with default config; we will use per-call eps override where needed
+        config = cuszp_wrapper_cpp.CompressionConfig(
+            error_bound=1e-4,
+            use_relative_error=True,
+            processing_dim=cuszp_wrapper_cpp.CuszpDim.DIM_1D,
+            encoding_mode=cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN,
+            data_type=cuszp_wrapper_cpp.CuszpType.TYPE_FLOAT
+        )
+        compressor = cuszp_wrapper_cpp.CuSZpWrapper(config, args.device)
 
     # Policies to evaluate
     policies = ['baseline', 'static_cuszp', 'adaptive_cuszp', 'int8', 'zlib']
@@ -138,7 +159,7 @@ def main():
 
     for model_id in args.models:
         print(f"\nEvaluating model {model_id}")
-        tensor = generate_kv_cache(model_id, target_size=4194304).to(device)
+        tensor = generate_kv_cache(model_id, target_size=4194304, use_synthetic=args.synthetic, device=device).to(device)
         orig_size_bytes = tensor.numel() * tensor.element_size()
 
         # baseline bandwidths

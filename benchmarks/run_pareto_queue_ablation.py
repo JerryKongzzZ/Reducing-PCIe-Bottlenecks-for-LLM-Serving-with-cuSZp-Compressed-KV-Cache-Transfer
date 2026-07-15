@@ -6,24 +6,53 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Mocking data generation for the 3 required plots
-# In a real scenario, this would hook into vLLM's benchmark suite (like `vllm/benchmarks/benchmark_serving.py`)
-# but here we generate representative simulation data based on our system's expected behavior.
+def plot_pareto_boundary(output_dir, eval_json_path=None):
+    """Task 1: Pareto boundary.
 
-def plot_pareto_boundary(output_dir):
+    If `eval_json_path` exists, plot measured effective bandwidth vs compression ratio
+    across models. Otherwise fall back to simulated illustrative data.
     """
-    Task 1: End-to-end Pareto boundary plot
-    X-axis: Throughput (Tokens/sec)
-    Y-axis: Accuracy / Perplexity (or arbitrary task score)
-    """
+    if eval_json_path and os.path.exists(eval_json_path):
+        with open(eval_json_path, 'r') as fh:
+            data = json.load(fh)
+
+        models = list(data.keys())
+        ratios = []
+        eff_bws = []
+        for m in models:
+            entry = data[m]
+            # Prefer static_cuszp/eval fields if present
+            sc = entry.get('static_cuszp') or entry.get('static_cuszp', {})
+            comp_size = sc.get('comp_size') or entry.get('static_cuszp', {}).get('comp_size') or 1
+            orig = entry.get('orig_size_bytes') or 1
+            eff_bw = sc.get('eff_out_bw') or entry.get('static_cuszp', {}).get('eff_out_bw') or 0
+            ratios.append(orig / max(1, comp_size))
+            eff_bws.append(eff_bw)
+
+        plt.figure(figsize=(8, 6))
+        plt.scatter(eff_bws, ratios, s=80)
+        for i, m in enumerate(models):
+            plt.text(eff_bws[i], ratios[i], m)
+        plt.xlabel('Effective Swap-Out Bandwidth (GB/s)')
+        plt.ylabel('Compression Ratio (orig / comp)')
+        plt.title('Measured Effective Bandwidth vs Compression Ratio')
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.tight_layout()
+        out = os.path.join(output_dir, 'pareto_boundary_measured.png')
+        plt.savefig(out, dpi=300)
+        plt.close()
+        print(f"Saved measured Pareto plot to {out}")
+        return
+
+    # Fallback simulated plot (existing behavior)
     throughput_vllm_baseline = [2000, 2500, 3000]
-    accuracy_vllm_baseline = [85.0, 84.8, 80.5] # Dropping off due to queue congestion timeouts/drops
+    accuracy_vllm_baseline = [85.0, 84.8, 80.5]
 
     throughput_static_compression = [3500, 4000, 4500]
-    accuracy_static_compression = [83.0, 82.5, 81.0] # Consistently lower accuracy due to static lossy compression
+    accuracy_static_compression = [83.0, 82.5, 81.0]
 
     throughput_adaptive = [3000, 4000, 5500]
-    accuracy_adaptive = [84.9, 84.5, 83.5] # Maintains high accuracy, scales better
+    accuracy_adaptive = [84.9, 84.5, 83.5]
 
     plt.figure(figsize=(8, 6))
     plt.plot(throughput_vllm_baseline, accuracy_vllm_baseline, 'ro-', label='Baseline vLLM (Uncompressed)')

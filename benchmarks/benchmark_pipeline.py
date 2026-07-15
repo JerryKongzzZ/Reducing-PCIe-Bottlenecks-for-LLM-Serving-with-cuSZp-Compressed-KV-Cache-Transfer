@@ -1,11 +1,13 @@
-import torch
-import time
 import argparse
-import logging
-import numpy as np
 import json
-import sys
+import logging
 import os
+import sys
+import time
+import zlib
+
+import numpy as np
+import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -19,16 +21,32 @@ if pipeline_dir not in sys.path:
 try:
     import cuszp_wrapper_cpp
 except ImportError as e:
-    logger.error(f"Failed to import cuszp_wrapper_cpp: {e}")
-    sys.exit(1)
+    cuszp_wrapper_cpp = None
+    logger.warning(f"Failed to import cuszp_wrapper_cpp: {e}; using CPU zlib fallback for reproducibility")
 
-def generate_kv_cache(model_id, target_size=4194304):
-    logger.info(f"Loading model {model_id}...")
+
+def _synchronize_device(device: torch.device):
+    if device.type == "cuda":
+        torch.cuda.synchronize()
+
+
+def generate_kv_cache(model_id, target_size=4194304, use_synthetic=False, device=None):
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    if use_synthetic:
+        logger.info("Using synthetic tensor for smoke-test mode")
+        generator = torch.Generator(device="cpu")
+        generator.manual_seed(0)
+        tensor = torch.randn(target_size, generator=generator, dtype=torch.float32)
+        return tensor.to(device).contiguous()
+
+    logger.info(f"Loading model {model_id} on {device}...")
     tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForCausalLM.from_pretrained(model_id).cuda()
-    
+    model = AutoModelForCausalLM.from_pretrained(model_id).to(device)
+
     text = "The Hong Kong Polytechnic University (PolyU) is a public research university located in Hung Hom, Hong Kong. " * 30
-    inputs = tokenizer(text, return_tensors="pt", max_length=1000, truncation=True).to("cuda")
+    inputs = tokenizer(text, return_tensors="pt", max_length=1000, truncation=True).to(device)
 
     with torch.no_grad():
         outputs = model(**inputs, use_cache=True)
@@ -52,102 +70,118 @@ def generate_kv_cache(model_id, target_size=4194304):
     return kv_tensor.contiguous()
 
 def measure_baseline(tensor, device, num_iterations=50):
-    # D2H (Swap OUT Baseline)
     gpu_tensor = tensor.to(device)
-    for _ in range(10): _ = gpu_tensor.cpu()
-    torch.cuda.synchronize()
-    
+    for _ in range(10):
+        _ = gpu_tensor.cpu()
+    _synchronize_device(device)
+
     d2h_times = []
     for _ in range(num_iterations):
-        torch.cuda.synchronize()
+        _synchronize_device(device)
         start = time.perf_counter()
         _ = gpu_tensor.cpu()
-        torch.cuda.synchronize()
+        _synchronize_device(device)
         d2h_times.append(time.perf_counter() - start)
-        
+
     avg_d2h = np.mean(d2h_times)
-    
-    # H2D (Swap IN Baseline)
+
     cpu_tensor = gpu_tensor.cpu()
-    for _ in range(10): _ = cpu_tensor.to(device, non_blocking=False)
-    torch.cuda.synchronize()
-    
+    for _ in range(10):
+        _ = cpu_tensor.to(device, non_blocking=False)
+    _synchronize_device(device)
+
     h2d_times = []
     for _ in range(num_iterations):
-        torch.cuda.synchronize()
+        _synchronize_device(device)
         start = time.perf_counter()
         _ = cpu_tensor.to(device, non_blocking=False)
-        torch.cuda.synchronize()
+        _synchronize_device(device)
         h2d_times.append(time.perf_counter() - start)
-        
+
     avg_h2d = np.mean(h2d_times)
-    
+
     data_size_bytes = tensor.numel() * 4
     return {
-        "d2h_bandwidth": data_size_bytes / avg_d2h / 1e9,
-        "h2d_bandwidth": data_size_bytes / avg_h2d / 1e9,
+        "d2h_bandwidth": data_size_bytes / avg_d2h / 1e9 if avg_d2h > 0 else 0.0,
+        "h2d_bandwidth": data_size_bytes / avg_h2d / 1e9 if avg_h2d > 0 else 0.0,
         "d2h_time": avg_d2h,
-        "h2d_time": avg_h2d
+        "h2d_time": avg_h2d,
     }
 
 def measure_compression(tensor, device_id, error_bound=1e-4, num_iterations=50):
+    if cuszp_wrapper_cpp is None:
+        cpu_tensor = tensor.detach().cpu().contiguous().view(-1)
+        payload = cpu_tensor.numpy().tobytes()
+        start = time.perf_counter()
+        compressed_payload = zlib.compress(payload)
+        comp_time = time.perf_counter() - start
+        start = time.perf_counter()
+        zlib.decompress(compressed_payload)
+        decomp_time = time.perf_counter() - start
+        max_error = float(torch.max(torch.abs(cpu_tensor - torch.frombuffer(zlib.decompress(compressed_payload), dtype=torch.float32))).item())
+        return {
+            "comp_time": comp_time,
+            "decomp_time": decomp_time,
+            "comp_size": len(compressed_payload),
+            "max_error": max_error,
+            "backend": "cpu_zlib_fallback",
+        }
+
     device = torch.device(f"cuda:{device_id}")
     config = cuszp_wrapper_cpp.CompressionConfig(
         error_bound=error_bound,
         use_relative_error=True,
         processing_dim=cuszp_wrapper_cpp.CuszpDim.DIM_1D,
         encoding_mode=cuszp_wrapper_cpp.CuszpMode.MODE_PLAIN,
-        data_type=cuszp_wrapper_cpp.CuszpType.TYPE_FLOAT
+        data_type=cuszp_wrapper_cpp.CuszpType.TYPE_FLOAT,
     )
     compressor = cuszp_wrapper_cpp.CuSZpWrapper(config, device_id)
-    
-    estimated_size = cuszp_wrapper_cpp.CuSZpWrapper.estimate_compressed_buffer_size(
-        tensor.numel() * 4
-    )
+
+    estimated_size = cuszp_wrapper_cpp.CuSZpWrapper.estimate_compressed_buffer_size(tensor.numel() * 4)
     compressed_buffer = torch.empty(estimated_size, dtype=torch.uint8, device=device)
-    
-    # Warm up
+
     for _ in range(5):
         success, compressed_buffer, actual_size, actual_eb = compressor.compress(tensor, compressed_buffer)
         if success:
             decomp = torch.empty_like(tensor)
             compressor.decompress(compressed_buffer, actual_size, decomp, actual_eb)
-    torch.cuda.synchronize()
-    
+    _synchronize_device(device)
+
     comp_times = []
     comp_sizes = []
     actual_eb_last = 0.0
     for _ in range(num_iterations):
-        torch.cuda.synchronize()
+        _synchronize_device(device)
         start = time.perf_counter()
         success, compressed_buffer, actual_size, actual_eb = compressor.compress(tensor, compressed_buffer)
-        torch.cuda.synchronize()
+        _synchronize_device(device)
         if success:
             comp_times.append(time.perf_counter() - start)
             comp_sizes.append(actual_size)
             actual_eb_last = actual_eb
-            
+
     decomp_times = []
     if comp_sizes:
         actual_size = comp_sizes[0]
         for _ in range(num_iterations):
             decomp = torch.empty_like(tensor)
-            torch.cuda.synchronize()
+            _synchronize_device(device)
             start = time.perf_counter()
             compressor.decompress(compressed_buffer, actual_size, decomp, actual_eb_last)
-            torch.cuda.synchronize()
+            _synchronize_device(device)
             decomp_times.append(time.perf_counter() - start)
-            
+
     decomp = torch.empty_like(tensor)
     compressor.decompress(compressed_buffer, int(np.mean(comp_sizes)), decomp, actual_eb_last)
     abs_errors = torch.abs(tensor - decomp)
     max_error = torch.max(abs_errors).item()
-    
+
     return {
         "comp_time": np.mean(comp_times),
         "decomp_time": np.mean(decomp_times),
         "comp_size": np.mean(comp_sizes),
-        "max_error": max_error
+        "max_error": max_error,
+        "backend": "cuszp",
     }
 
 def main():
@@ -155,9 +189,7 @@ def main():
     parser.add_argument("--tensor-size", type=int, default=4194304, help="Tensor size to benchmark")
     parser.add_argument("--error-bound", type=float, default=1e-4, help="Relative error bound")
     parser.add_argument("--iterations", type=int, default=50, help="Number of iterations")
-    args = parser.parse_args()
-
-    models = [
+    parser.add_argument("--models", nargs="+", default=[
         "gpt2",
         "Qwen/Qwen2.5-0.5B",
         "Qwen/Qwen2.5-1.5B",
@@ -165,22 +197,29 @@ def main():
         "facebook/opt-350m",
         "EleutherAI/pythia-160m",
         "EleutherAI/pythia-410m",
-        "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
-    ]
-    
-    device_id = 0
-    device = torch.device(f"cuda:{device_id}")
-    torch.cuda.set_device(device)
-    
+        "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",
+    ], help="Models to benchmark")
+    parser.add_argument("--synthetic", action="store_true", help="Use a deterministic synthetic tensor instead of downloading Hugging Face models")
+    parser.add_argument("--device", type=int, default=0, help="CUDA device id when CUDA is available")
+    args = parser.parse_args()
+
+    if torch.cuda.is_available():
+        device = torch.device(f"cuda:{args.device}")
+        torch.cuda.set_device(device)
+    else:
+        device = torch.device("cpu")
+        logger.warning("CUDA is not available; falling back to CPU-only execution")
+
     results = []
-    
-    for model_id in models:
+    device_id = args.device
+
+    for model_id in args.models:
         logger.info(f"\n==========================================")
         logger.info(f"🧪 Testing: {model_id}")
         logger.info(f"==========================================")
         
         # 1. Generate KV Cache
-        tensor = generate_kv_cache(model_id, target_size=args.tensor_size).to(device)
+        tensor = generate_kv_cache(model_id, target_size=args.tensor_size, use_synthetic=args.synthetic, device=device).to(device)
         orig_size_bytes = tensor.numel() * 4
         
         # 2. Baseline Profiling
@@ -210,12 +249,13 @@ def main():
             "Model": safe_name,
             "Ratio": ratio,
             "MaxError": comp_perf["max_error"],
+            "Backend": comp_perf.get("backend", "cuszp"),
             "Base_Out_BW": base_perf["d2h_bandwidth"],
             "Eff_Out_BW": eff_out_bw,
             "Out_Speedup": out_speedup,
             "Base_In_BW": base_perf["h2d_bandwidth"],
             "Eff_In_BW": eff_in_bw,
-            "In_Speedup": in_speedup
+            "In_Speedup": in_speedup,
         }
         results.append(res)
         
