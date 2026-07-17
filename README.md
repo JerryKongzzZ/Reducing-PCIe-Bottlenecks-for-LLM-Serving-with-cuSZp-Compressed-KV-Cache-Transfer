@@ -1,4 +1,4 @@
-# CReducing PCIe Bottlenecks for LLM Serving with cuSZp-Compressed KV-Cache Transfer
+# Reducing PCIe Bottlenecks for LLM Serving with cuSZp-Compressed KV-Cache Transfer
 
 This repository provides a research prototype for reducing CPU-GPU KV-cache transfer overhead in LLM serving systems. The core idea is to compress KV-cache blocks before swap-in/swap-out so that the cost of PCIe transfer is reduced while preserving acceptable reconstruction quality.
 
