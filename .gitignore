@@ -18,6 +18,8 @@ build/
 build_local/
 bin/
 *.cu
+!integration/cuszp_wrapper/cuszp_fastpath.cu
+!integration/cuszp_wrapper/cuszp_batched_fixed.cu
 *.cc
 *.o
 *.obj

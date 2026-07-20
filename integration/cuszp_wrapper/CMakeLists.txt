@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(cuszp_wrapper)
+project(cuszp_wrapper LANGUAGES CXX CUDA)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -48,6 +48,8 @@ include_directories(
 # Source files
 set(SOURCES
     cuszp_wrapper.cpp
+    cuszp_fastpath.cu
+    cuszp_batched_fixed.cu
     pybind11_bindings.cpp
 )
 
@@ -73,6 +75,8 @@ target_compile_options(cuszp_wrapper_cpp PRIVATE
 set_target_properties(cuszp_wrapper_cpp PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/../compression_pipeline"
     PREFIX ""
+    CUDA_STANDARD 17
+    CUDA_STANDARD_REQUIRED ON
 )
 
 # Installation rules (optional)

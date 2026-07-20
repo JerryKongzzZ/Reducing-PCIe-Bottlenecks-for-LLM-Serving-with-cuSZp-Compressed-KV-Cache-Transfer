@@ -2,84 +2,51 @@
 set -euo pipefail
 
 WORKSPACE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
-export PYTHONPATH="${WORKSPACE_ROOT}/integration/compression_pipeline:${WORKSPACE_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
+PYTHON_BIN="${PYTHON_BIN:-${WORKSPACE_ROOT}/venv/bin/python}"
+SKIP_BUILD="${SKIP_BUILD:-1}"
+RUN_VLLM_SMOKE="${RUN_VLLM_SMOKE:-0}"
+# CUDA 12.0 cannot name RTX 5080's native architecture. Embed compute_90 PTX
+# so the Blackwell driver can JIT the custom batched decoder. Override this
+# value when building for a different deployment target.
+TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-9.0+PTX}"
+export TORCH_CUDA_ARCH_LIST
 
-BENCHMARK_ITERATIONS="${BENCHMARK_ITERATIONS:-5}"
-EVAL_ITERATIONS="${EVAL_ITERATIONS:-5}"
-RUN_SYNTHETIC="${RUN_SYNTHETIC:-0}"
-SKIP_BUILD="${SKIP_BUILD:-0}"
-
-if [[ -x "${WORKSPACE_ROOT}/venv/bin/python3.12" ]]; then
-  PYTHON_BIN="${WORKSPACE_ROOT}/venv/bin/python3.12"
-elif command -v python3 >/dev/null 2>&1; then
-  PYTHON_BIN="$(command -v python3)"
-else
-  echo "Python 3 was not found. Please create a virtual environment or install Python 3 first." >&2
+if [[ ! -x "${PYTHON_BIN}" ]]; then
+  echo "Python environment not found: ${PYTHON_BIN}" >&2
   exit 1
 fi
 
-mkdir -p "${WORKSPACE_ROOT}/data"
+export PYTHONPATH="${WORKSPACE_ROOT}/integration/compression_pipeline:${WORKSPACE_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 
-echo "=========================================="
-echo "🚀 [1/5] Preparing the compression runtime..."
-echo "=========================================="
 if [[ "${SKIP_BUILD}" != "1" ]]; then
-  cd "${WORKSPACE_ROOT}/integration/cuszp_wrapper"
-  rm -rf build_local && mkdir -p build_local
-  cd build_local
-  if ! cmake .. \
+  BUILD_DIR="${WORKSPACE_ROOT}/integration/cuszp_wrapper/build_local"
+  cmake -S "${WORKSPACE_ROOT}/integration/cuszp_wrapper" -B "${BUILD_DIR}" \
     -DPython3_EXECUTABLE="${PYTHON_BIN}" \
     -DPython3_NumPy_INCLUDE_DIRS="$(${PYTHON_BIN} -c 'import numpy; print(numpy.get_include())')" \
     -Dpybind11_DIR="$(${PYTHON_BIN} -m pybind11 --cmakedir)" \
-    -DCMAKE_PREFIX_PATH="$(${PYTHON_BIN} -c "import torch; print(torch.utils.cmake_prefix_path)")" \
-    -DCMAKE_CXX_FLAGS="$(${PYTHON_BIN} -c 'import torch.utils.cpp_extension as E; print(" ".join("-I"+p for p in E.include_paths()))')"; then
-    echo "⚠️  cuSZp build configuration failed; continuing in CPU/zlib fallback mode."
-  elif ! cmake --build . -j"$(nproc)"; then
-    echo "⚠️  cuSZp build failed; continuing in CPU/zlib fallback mode."
-  else
-    echo "✅ Extension build completed"
-  fi
-else
-  echo "⚠️  Skipping extension build because SKIP_BUILD=1"
+    -DCMAKE_PREFIX_PATH="$(${PYTHON_BIN} -c 'import torch; print(torch.utils.cmake_prefix_path)')"
+  cmake --build "${BUILD_DIR}" -j"$(nproc)"
 fi
 
-echo ""
-echo "=========================================="
-echo "📊 [2/5] Running the unified benchmark pipeline..."
-echo "=========================================="
 cd "${WORKSPACE_ROOT}"
-if [[ "${RUN_SYNTHETIC}" == "1" ]]; then
-  "${PYTHON_BIN}" benchmarks/benchmark_pipeline.py --tensor-size 4194304 --iterations "${BENCHMARK_ITERATIONS}" --synthetic
-else
-  "${PYTHON_BIN}" benchmarks/benchmark_pipeline.py --tensor-size 4194304 --iterations "${BENCHMARK_ITERATIONS}"
+"${PYTHON_BIN}" -m pytest -q
+
+if [[ "${RUN_VLLM_SMOKE}" == "1" ]]; then
+  MODEL="${MODEL:-Qwen/Qwen2.5-0.5B}"
+  METRICS="${METRICS:-data/vllm_offload_smoke.jsonl}"
+  SUMMARY="${SUMMARY:-data/vllm_offload_smoke_summary.json}"
+  CUSZP_MODE="${CUSZP_MODE:-fixed}"
+  ERROR_BOUND="${ERROR_BOUND:-1e-5}"
+  "${PYTHON_BIN}" benchmarks/smoke_vllm_compressed_offload.py \
+    --model "${MODEL}" \
+    --metrics "${METRICS}" \
+    --summary "${SUMMARY}" \
+    --codec cuszp \
+    --cuszp-mode "${CUSZP_MODE}" \
+    --error-bound "${ERROR_BOUND}" \
+    --async-store \
+    --profile-restore-stages \
+    --batch-restore-transfers
 fi
 
-echo ""
-echo "=========================================="
-echo "🎯 [3/5] Profiling layer sensitivity..."
-echo "=========================================="
-cd "${WORKSPACE_ROOT}"
-"${PYTHON_BIN}" benchmarks/layer_sensitivity_sweep.py --model gpt2 --out data/layer_sensitivity.json --eps 1e-5 1e-4 1e-3 1e-2
-
-echo ""
-echo "=========================================="
-echo "📈 [4/5] Evaluating compression policies..."
-echo "=========================================="
-cd "${WORKSPACE_ROOT}"
-if [[ "${RUN_SYNTHETIC}" == "1" ]]; then
-  "${PYTHON_BIN}" benchmarks/evaluate_policies.py --out data/eval_summary.json --iterations "${EVAL_ITERATIONS}" --synthetic
-else
-  "${PYTHON_BIN}" benchmarks/evaluate_policies.py --out data/eval_summary.json --iterations "${EVAL_ITERATIONS}"
-fi
-
-echo ""
-echo "=========================================="
-echo "🖼️ [5/5] Generating summary figures..."
-echo "=========================================="
-cd "${WORKSPACE_ROOT}"
-"${PYTHON_BIN}" benchmarks/run_pareto_queue_ablation.py
-"${PYTHON_BIN}" benchmarks/plot_summary.py
-
-echo ""
-echo "🎉 Workflow completed. Outputs are available under data/"
+echo "Maintained validation workflow completed."
