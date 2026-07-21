@@ -1,0 +1,287 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/gate_d_fair_async_probe/EleutherAI_pythia_160m/async_int8_trial_3.jsonl",
+  "num_events": 15,
+  "num_successful": 15,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "int8",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    127,
+    127,
+    127,
+    127,
+    127,
+    127,
+    127,
+    127
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 0.515625,
+  "exact_match_rate": 0.5,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 68.31073760986328,
+      "e2e_ms": 68.31073760986328,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 66.19906425476074,
+      "e2e_ms": 201.571866258746,
+      "tpot_ms": 19.338971714855038,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 147.19319343566895,
+      "e2e_ms": 232.59282344952226,
+      "tpot_ms": 12.199947144836187,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 230.6957244873047,
+      "e2e_ms": 356.11007147235796,
+      "tpot_ms": 17.916335283579038,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 286.0250473022461,
+      "e2e_ms": 379.41283828695305,
+      "tpot_ms": 13.341112997815278,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 377.286434173584,
+      "e2e_ms": 426.83966117328964,
+      "tpot_ms": 49.55322699970566,
+      "generation_tokens": 2
+    },
+    {
+      "ttft_ms": 473.91366958618164,
+      "e2e_ms": 473.91366958618164,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 476.9885540008545,
+      "e2e_ms": 476.9885540008545,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 17.663002014160156,
+      "e2e_ms": 17.663002014160156,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 22.888898849487305,
+      "e2e_ms": 22.888898849487305,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 36.4990234375,
+      "e2e_ms": 36.4990234375,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 41.89729690551758,
+      "e2e_ms": 74.91414490505122,
+      "tpot_ms": 4.716692571361948,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 54.44455146789551,
+      "e2e_ms": 54.44455146789551,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 71.32601737976074,
+      "e2e_ms": 78.63959137466736,
+      "tpot_ms": 7.313573994906619,
+      "generation_tokens": 2
+    },
+    {
+      "ttft_ms": 90.84081649780273,
+      "e2e_ms": 90.84081649780273,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 93.46318244934082,
+      "e2e_ms": 93.46318244934082,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    }
+  ],
+  "mean_initial_e2e_ms": 326.96752772972104,
+  "mean_replay_e2e_ms": 58.66915137448814,
+  "mean_replay_ttft_ms": 53.627848625183105,
+  "mean_replay_tpot_ms": 1.503783320783571,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        0
+      ],
+      "replay_token_ids": [
+        0
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "",
+      "replay_text": ""
+    },
+    {
+      "reference_token_ids": [
+        187,
+        510,
+        897,
+        273,
+        247,
+        18543,
+        14,
+        3169
+      ],
+      "replay_token_ids": [
+        0
+      ],
+      "token_match_rate": 0.0,
+      "exact_match": false,
+      "reference_text": "\nThe use of a calibration-based",
+      "replay_text": ""
+    },
+    {
+      "reference_token_ids": [
+        187,
+        3,
+        510,
+        308,
+        3,
+        187,
+        187,
+        510
+      ],
+      "replay_token_ids": [
+        0
+      ],
+      "token_match_rate": 0.0,
+      "exact_match": false,
+      "reference_text": "\n\"The T\"\n\nThe",
+      "replay_text": ""
+    },
+    {
+      "reference_token_ids": [
+        187,
+        5065,
+        6731,
+        13757,
+        29698,
+        5659,
+        1223,
+        24279
+      ],
+      "replay_token_ids": [
+        187,
+        187,
+        1909,
+        247,
+        906,
+        13,
+        3242,
+        1255
+      ],
+      "token_match_rate": 0.125,
+      "exact_match": false,
+      "reference_text": "\nCompiler optimization transforms programs while preserving",
+      "replay_text": "\n\nAs a result, exactness"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        510,
+        806,
+        14,
+        249,
+        14,
+        783,
+        14
+      ],
+      "replay_token_ids": [
+        0
+      ],
+      "token_match_rate": 0.0,
+      "exact_match": false,
+      "reference_text": "\nThe first-in-the-",
+      "replay_text": ""
+    },
+    {
+      "reference_token_ids": [
+        187,
+        0
+      ],
+      "replay_token_ids": [
+        187,
+        0
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\n",
+      "replay_text": "\n"
+    },
+    {
+      "reference_token_ids": [
+        0
+      ],
+      "replay_token_ids": [
+        0
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "",
+      "replay_text": ""
+    },
+    {
+      "reference_token_ids": [
+        0
+      ],
+      "replay_token_ids": [
+        0
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "",
+      "replay_text": ""
+    }
+  ]
+}

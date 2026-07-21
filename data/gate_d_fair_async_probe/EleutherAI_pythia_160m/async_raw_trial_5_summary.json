@@ -1,0 +1,316 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/gate_d_fair_async_probe/EleutherAI_pythia_160m/async_raw_trial_5.jsonl",
+  "num_events": 14,
+  "num_successful": 14,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "raw",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    127,
+    127,
+    127,
+    127,
+    127,
+    127,
+    127,
+    127
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 0.5625,
+  "exact_match_rate": 0.5,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 48.68364334106445,
+      "e2e_ms": 48.68364334106445,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 84.71918106079102,
+      "e2e_ms": 121.77081606932916,
+      "tpot_ms": 37.05163500853814,
+      "generation_tokens": 2
+    },
+    {
+      "ttft_ms": 120.24497985839844,
+      "e2e_ms": 180.97621185006574,
+      "tpot_ms": 8.6758902845239,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 159.34467315673828,
+      "e2e_ms": 221.5389001648873,
+      "tpot_ms": 8.884889572592717,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 220.4456329345703,
+      "e2e_ms": 284.0195309254341,
+      "tpot_ms": 9.081985427266252,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 260.87141036987305,
+      "e2e_ms": 288.2391043822281,
+      "tpot_ms": 3.90967057319358,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 297.7721691131592,
+      "e2e_ms": 297.7721691131592,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 304.89563941955566,
+      "e2e_ms": 331.22682239627466,
+      "tpot_ms": 3.761597568102713,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 16.91913604736328,
+      "e2e_ms": 16.91913604736328,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 20.272254943847656,
+      "e2e_ms": 54.40435095806606,
+      "tpot_ms": 4.876013716316915,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 31.976699829101562,
+      "e2e_ms": 36.94457281380892,
+      "tpot_ms": 4.9678729847073555,
+      "generation_tokens": 2
+    },
+    {
+      "ttft_ms": 56.83541297912598,
+      "e2e_ms": 88.12269096961245,
+      "tpot_ms": 4.469611141498068,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 71.21801376342773,
+      "e2e_ms": 99.35782078537159,
+      "tpot_ms": 4.019972431706265,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 103.45673561096191,
+      "e2e_ms": 107.66152461292222,
+      "tpot_ms": 4.204789001960307,
+      "generation_tokens": 2
+    },
+    {
+      "ttft_ms": 118.48115921020508,
+      "e2e_ms": 118.48115921020508,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 124.32527542114258,
+      "e2e_ms": 149.17065942427143,
+      "tpot_ms": 3.549340571875551,
+      "generation_tokens": 8
+    }
+  ],
+  "mean_initial_e2e_ms": 221.77839978030534,
+  "mean_replay_e2e_ms": 83.88273935270263,
+  "mean_replay_ttft_ms": 67.93558597564697,
+  "mean_replay_tpot_ms": 3.2609499810080576,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        0
+      ],
+      "replay_token_ids": [
+        0
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "",
+      "replay_text": ""
+    },
+    {
+      "reference_token_ids": [
+        187,
+        0
+      ],
+      "replay_token_ids": [
+        187,
+        34,
+        1344,
+        11168,
+        398,
+        2557,
+        13392,
+        11123
+      ],
+      "token_match_rate": 0.125,
+      "exact_match": false,
+      "reference_text": "\n",
+      "replay_text": "\nAstronomers measure distant galaxies"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        3,
+        510,
+        308,
+        3,
+        187,
+        187,
+        510
+      ],
+      "replay_token_ids": [
+        187,
+        0
+      ],
+      "token_match_rate": 0.125,
+      "exact_match": false,
+      "reference_text": "\n\"The T\"\n\nThe",
+      "replay_text": "\n"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        510,
+        1563,
+        403,
+        253,
+        2022,
+        1543,
+        273
+      ],
+      "replay_token_ids": [
+        187,
+        5065,
+        6731,
+        13757,
+        29698,
+        5659,
+        1223,
+        24279
+      ],
+      "token_match_rate": 0.125,
+      "exact_match": false,
+      "reference_text": "\nThe following are the main results of",
+      "replay_text": "\nCompiler optimization transforms programs while preserving"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        510,
+        806,
+        14,
+        249,
+        14,
+        783,
+        14
+      ],
+      "replay_token_ids": [
+        187,
+        510,
+        806,
+        14,
+        249,
+        14,
+        783,
+        14
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\nThe first-in-the-",
+      "replay_text": "\nThe first-in-the-"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        510,
+        353,
+        14,
+        18,
+        13,
+        46,
+        14
+      ],
+      "replay_token_ids": [
+        187,
+        0
+      ],
+      "token_match_rate": 0.125,
+      "exact_match": false,
+      "reference_text": "\nThe M-1,M-",
+      "replay_text": "\n"
+    },
+    {
+      "reference_token_ids": [
+        0
+      ],
+      "replay_token_ids": [
+        0
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "",
+      "replay_text": ""
+    },
+    {
+      "reference_token_ids": [
+        187,
+        34,
+        1344,
+        11168,
+        398,
+        2557,
+        13392,
+        11123
+      ],
+      "replay_token_ids": [
+        187,
+        34,
+        1344,
+        11168,
+        398,
+        2557,
+        13392,
+        11123
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\nAstronomers measure distant galaxies",
+      "replay_text": "\nAstronomers measure distant galaxies"
+    }
+  ]
+}

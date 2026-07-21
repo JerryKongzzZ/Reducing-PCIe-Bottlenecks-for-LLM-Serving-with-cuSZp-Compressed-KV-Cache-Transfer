@@ -1,0 +1,362 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/gate_d_fair_async_probe/facebook_opt_125m/async_int8_trial_2.jsonl",
+  "num_events": 15,
+  "num_successful": 15,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "int8",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    130,
+    130,
+    130,
+    130,
+    130,
+    130,
+    130,
+    130
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 0.828125,
+  "exact_match_rate": 0.75,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 76.44009590148926,
+      "e2e_ms": 130.20726689137518,
+      "tpot_ms": 7.681024427126561,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 74.34439659118652,
+      "e2e_ms": 128.11156758107245,
+      "tpot_ms": 7.681024427126561,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 202.42595672607422,
+      "e2e_ms": 252.985643746797,
+      "tpot_ms": 7.222812431531826,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 200.62613487243652,
+      "e2e_ms": 251.1858218931593,
+      "tpot_ms": 7.222812431531826,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 330.05380630493164,
+      "e2e_ms": 389.13940032944083,
+      "tpot_ms": 8.440799146358456,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 328.357458114624,
+      "e2e_ms": 387.4430521391332,
+      "tpot_ms": 8.440799146358456,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 469.8677062988281,
+      "e2e_ms": 493.27825231011957,
+      "tpot_ms": 3.3443637158987776,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 468.2161808013916,
+      "e2e_ms": 491.62672681268305,
+      "tpot_ms": 3.3443637158987776,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 14.061450958251953,
+      "e2e_ms": 73.38075194275007,
+      "tpot_ms": 8.474185854928303,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 18.367290496826172,
+      "e2e_ms": 74.11522651091218,
+      "tpot_ms": 7.963990859155144,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 86.08341217041016,
+      "e2e_ms": 112.31979017611593,
+      "tpot_ms": 3.7480540008151104,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 87.83912658691406,
+      "e2e_ms": 113.86453657178208,
+      "tpot_ms": 3.717915712124003,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 126.23834609985352,
+      "e2e_ms": 156.02075710194185,
+      "tpot_ms": 4.2546301431554765,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 128.33309173583984,
+      "e2e_ms": 159.55143072642386,
+      "tpot_ms": 4.459762712940574,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 172.72114753723145,
+      "e2e_ms": 200.4251215257682,
+      "tpot_ms": 3.957710569790964,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 174.96705055236816,
+      "e2e_ms": 199.1959115548525,
+      "tpot_ms": 3.461265857497762,
+      "generation_tokens": 8
+    }
+  ],
+  "mean_initial_e2e_ms": 315.4972164629726,
+  "mean_replay_e2e_ms": 136.10919076381833,
+  "mean_replay_ttft_ms": 101.07636451721191,
+  "mean_replay_tpot_ms": 5.004689463800917,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        40321,
+        36440,
+        43401,
+        50118,
+        50118,
+        100,
+        33,
+        10
+      ],
+      "replay_token_ids": [
+        40321,
+        36440,
+        43401,
+        50118,
+        50118,
+        10169,
+        833,
+        24843
+      ],
+      "token_match_rate": 0.625,
+      "exact_match": false,
+      "reference_text": "_______________________________________________\n\nI have a",
+      "replay_text": "_______________________________________________\n\nMarine ecosystems"
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        40321,
+        36440,
+        43401,
+        50118,
+        50118,
+        43475,
+        5569,
+        1884
+      ],
+      "replay_token_ids": [
+        40321,
+        36440,
+        43401,
+        50118,
+        50118,
+        43475,
+        5569,
+        1884
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "_______________________________________________\n\nUrban rail planning",
+      "replay_text": "_______________________________________________\n\nUrban rail planning"
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        40321,
+        45627,
+        3067,
+        16508,
+        30254,
+        29,
+        3425,
+        6609
+      ],
+      "token_match_rate": 0.0,
+      "exact_match": false,
+      "reference_text": "        ",
+      "replay_text": "______________________________________ Medical imaging reconstructs internal structures"
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    }
+  ]
+}

@@ -1,26 +1,34 @@
-# Environments
+# Local environments and secrets
 .env
-.venv
+.env.*
+!.env.example
+.venv/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Python
+# Python caches, test output, and packaging
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+dist/
+.cache/
 
-# C++ / Build artifacts
+# Native/CMake build artifacts
 build/
 build_local/
+cmake-build-*/
 bin/
-*.cu
-!integration/cuszp_wrapper/cuszp_fastpath.cu
-!integration/cuszp_wrapper/cuszp_batched_fixed.cu
-*.cc
+*.so
 *.o
 *.obj
 *.a
@@ -33,17 +41,77 @@ bin/
 CMakeCache.txt
 CMakeFiles/
 CMakeScripts/
-Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
+build.ninja
+.ninja_deps
+.ninja_log
 
-# IDEs / OS
+# CUDA/GPU profiling output
+*.nsys-rep
+*.ncu-rep
+*.prof
+
+# IDE and OS files
 .vscode/
 .idea/
 .DS_Store
+Thumbs.db
 *.swp
 *~
 
-# Generated results
-data/
+# Local scratch directories
+/tmp/
+
+# LaTeX build output. Paper figures under figures/infocom remain trackable.
+/paper/*.aux
+/paper/*.bbl
+/paper/*.blg
+/paper/*.fdb_latexmk
+/paper/*.fls
+/paper/*.log
+/paper/*.out
+/paper/*.pdf
+/paper/*.synctex.gz
+/paper/*.toc
+/paper/_minted-*/
+
+# Previous thesis sources are local idea references, not INFOCOM artifacts.
+/paper/archive/fyp_main.tex
+/paper/archive/refs.bib
+
+# Data are ignored by default. Only measured artifacts declared in
+# reproducibility/formal_artifacts.json are admitted as paper evidence.
+data/*
+!data/EXPERIMENT_PROVENANCE.md
+!data/infocom_calibration_prompts.json
+!data/qwen2.5-1.5b_multi_prompt_sensitivity_top1-0.875.json
+!data/qwen2.5-1.5b_mixed_21x1e-4_7x1e-5.json
+!data/qwen2.5-1.5b_multi_prompt_sensitivity_1e-5_1e-4_per_prompt/
+!data/qwen2.5-1.5b_multi_prompt_sensitivity_1e-5_1e-4_per_prompt/**
+!data/gate_d_fair_async_probe/
+!data/gate_d_fair_async_probe/**
+!data/qwen1.5b_real_concurrency_v3/
+!data/qwen1.5b_real_concurrency_v3/**
+!data/qwen1.5b_open_loop_arrival_v1/
+!data/qwen1.5b_open_loop_arrival_v1/**
+!data/qwen0.5b_open_loop_arrival_v1/
+!data/qwen0.5b_open_loop_arrival_v1/**
+!data/infocom_long_context_quality_v1/
+!data/infocom_long_context_quality_v1/five_trial/
+!data/infocom_long_context_quality_v1/five_trial/**
+!data/infocom_long_context_quality_v1/prompts.json
+!data/infocom_long_context_quality_v1/prompts.meta.json
+data/infocom_long_context_quality_v1/pilot2/
+!data/vllm_qwen1.5b_4k_gate_c_packed_mixed21_complete_2trial/
+!data/vllm_qwen1.5b_4k_gate_c_packed_mixed21_complete_2trial/**
+
+# Diagnostics and large binary caches are never canonical paper evidence.
+data/**/*.log
+data/**/*.pt
+data/**/*.pth
+data/**/*.bin
+data/**/*.npy
+data/**/*.npz
+data/**/*.safetensors

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "python": "3.12.3",
+  "packages": {
+    "torch": "2.11.0",
+    "numpy": "2.3.5",
+    "pybind11": "3.0.4",
+    "setuptools": "80.10.2",
+    "wheel": "0.47.0",
+    "vllm": "0.23.0",
+    "transformers": "5.12.1",
+    "matplotlib": "3.11.0",
+    "tqdm": "4.68.3",
+    "pytest": "9.1.1",
+    "safetensors": "0.8.0",
+    "tokenizers": "0.22.2",
+    "flashinfer-python": "0.6.12"
+  },
+  "tools": {
+    "cmake": "3.28.3",
+    "nvcc_release": "12.0",
+    "gcc": "13.3.0"
+  },
+  "cuszp": {
+    "repository": "https://github.com/szcompressor/cuSZp.git",
+    "commit": "f581dcf329c907c320f4743a9c6e7ee2fb9c5494",
+    "default_root": "/opt/cuSZp"
+  },
+  "reviewed_hardware": {
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "driver": "610.74",
+    "gpu_memory_mib": 16303,
+    "cpu": "Intel(R) Core(TM) Ultra 7 265KF",
+    "os": "Ubuntu 24.04.4 LTS under WSL2",
+    "kernel": "6.6.87.2"
+  }
+}

@@ -1,0 +1,401 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/infocom_long_context_quality_v1/five_trial/async_zstd_trial_5.jsonl",
+  "num_events": 16,
+  "num_successful": 16,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "zstd",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    182,
+    182,
+    182,
+    182,
+    182,
+    182,
+    182,
+    182
+  ],
+  "prompt_style": "shared",
+  "prompt_file": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/infocom_long_context_quality_v1/prompts.json",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 1.0,
+  "exact_match_rate": 1.0,
+  "initial_task_accuracy": 1.0,
+  "replay_task_accuracy": 1.0,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 166.61763191223145,
+      "e2e_ms": 318.98224592441693,
+      "tpot_ms": 21.76637343031221,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 633.9077949523926,
+      "e2e_ms": 788.365433953004,
+      "tpot_ms": 22.06537700008734,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1081.8839073181152,
+      "e2e_ms": 1230.1808373304084,
+      "tpot_ms": 21.18527571604188,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1526.7009735107422,
+      "e2e_ms": 1682.434940506937,
+      "tpot_ms": 22.24770957088497,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 2004.9631595611572,
+      "e2e_ms": 2147.985022573266,
+      "tpot_ms": 20.431694716015564,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 2461.251974105835,
+      "e2e_ms": 2631.9170841015875,
+      "tpot_ms": 21.33313874946907,
+      "generation_tokens": 9
+    },
+    {
+      "ttft_ms": 2926.3968467712402,
+      "e2e_ms": 3105.101258784998,
+      "tpot_ms": 22.338051501719747,
+      "generation_tokens": 9
+    },
+    {
+      "ttft_ms": 3389.9011611938477,
+      "e2e_ms": 3535.635269188788,
+      "tpot_ms": 20.81915828499145,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 330.3341865539551,
+      "e2e_ms": 386.77633556653745,
+      "tpot_ms": 8.063164144654625,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 556.4773082733154,
+      "e2e_ms": 614.2122522578575,
+      "tpot_ms": 8.247849140648864,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 782.5567722320557,
+      "e2e_ms": 841.8467022420373,
+      "tpot_ms": 8.469990001425945,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1010.6909275054932,
+      "e2e_ms": 1070.3842994989827,
+      "tpot_ms": 8.527624570498508,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1244.9557781219482,
+      "e2e_ms": 1303.129520121729,
+      "tpot_ms": 8.310534571397252,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1468.8866138458252,
+      "e2e_ms": 1532.5490218529012,
+      "tpot_ms": 7.957801000884501,
+      "generation_tokens": 9
+    },
+    {
+      "ttft_ms": 1707.0062160491943,
+      "e2e_ms": 1773.5161290329415,
+      "tpot_ms": 8.3137391229684,
+      "generation_tokens": 9
+    },
+    {
+      "ttft_ms": 1939.7857189178467,
+      "e2e_ms": 1995.84935393068,
+      "tpot_ms": 8.009090716119058,
+      "generation_tokens": 8
+    }
+  ],
+  "initial_wall_ms": 3573.927871999331,
+  "replay_wall_ms": 2036.3902069802862,
+  "initial_requests_per_second": 2.238433534900812,
+  "replay_requests_per_second": 3.928520168962611,
+  "initial_output_tokens_per_second": 18.467076662931703,
+  "replay_output_tokens_per_second": 32.41029139394154,
+  "num_initial_requests": 8,
+  "num_replay_requests": 8,
+  "mean_initial_e2e_ms": 1930.0752615454257,
+  "mean_replay_e2e_ms": 1189.7829518129583,
+  "mean_replay_ttft_ms": 1130.0866901874542,
+  "mean_replay_tpot_ms": 8.237474158574644,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        1863,
+        20695,
+        12,
+        22,
+        18,
+        16,
+        19,
+        151643
+      ],
+      "replay_token_ids": [
+        1863,
+        20695,
+        12,
+        22,
+        18,
+        16,
+        19,
+        151643
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " ZETA-7314",
+      "replay_text": " ZETA-7314",
+      "expected_answer": "ZETA-7314",
+      "initial_task_correct": true,
+      "replay_task_correct": true
+    },
+    {
+      "reference_token_ids": [
+        5664,
+        12820,
+        12,
+        19,
+        23,
+        17,
+        21,
+        151643
+      ],
+      "replay_token_ids": [
+        5664,
+        12820,
+        12,
+        19,
+        23,
+        17,
+        21,
+        151643
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " NOVA-4826",
+      "replay_text": " NOVA-4826",
+      "expected_answer": "NOVA-4826",
+      "initial_task_correct": true,
+      "replay_task_correct": true
+    },
+    {
+      "reference_token_ids": [
+        2726,
+        20917,
+        12,
+        24,
+        15,
+        20,
+        18,
+        151643
+      ],
+      "replay_token_ids": [
+        2726,
+        20917,
+        12,
+        24,
+        15,
+        20,
+        18,
+        151643
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " ORBIT-9053",
+      "replay_text": " ORBIT-9053",
+      "expected_answer": "ORBIT-9053",
+      "initial_task_correct": true,
+      "replay_task_correct": true
+    },
+    {
+      "reference_token_ids": [
+        468,
+        73367,
+        12,
+        17,
+        21,
+        22,
+        16,
+        151643
+      ],
+      "replay_token_ids": [
+        468,
+        73367,
+        12,
+        17,
+        21,
+        22,
+        16,
+        151643
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " EMBER-2671",
+      "replay_text": " EMBER-2671",
+      "expected_answer": "EMBER-2671",
+      "initial_task_correct": true,
+      "replay_task_correct": true
+    },
+    {
+      "reference_token_ids": [
+        86005,
+        35978,
+        12,
+        21,
+        19,
+        23,
+        17,
+        151643
+      ],
+      "replay_token_ids": [
+        86005,
+        35978,
+        12,
+        21,
+        19,
+        23,
+        17,
+        151643
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " LYRIC-6482",
+      "replay_text": " LYRIC-6482",
+      "expected_answer": "LYRIC-6482",
+      "initial_task_correct": true,
+      "replay_task_correct": true
+    },
+    {
+      "reference_token_ids": [
+        25999,
+        2992,
+        57,
+        12,
+        16,
+        24,
+        18,
+        22,
+        151643
+      ],
+      "replay_token_ids": [
+        25999,
+        2992,
+        57,
+        12,
+        16,
+        24,
+        18,
+        22,
+        151643
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " QUARTZ-1937",
+      "replay_text": " QUARTZ-1937",
+      "expected_answer": "QUARTZ-1937",
+      "initial_task_correct": true,
+      "replay_task_correct": true
+    },
+    {
+      "reference_token_ids": [
+        431,
+        8093,
+        953,
+        12,
+        20,
+        16,
+        19,
+        23,
+        151643
+      ],
+      "replay_token_ids": [
+        431,
+        8093,
+        953,
+        12,
+        20,
+        16,
+        19,
+        23,
+        151643
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " RAVEN-5148",
+      "replay_text": " RAVEN-5148",
+      "expected_answer": "RAVEN-5148",
+      "initial_task_correct": true,
+      "replay_task_correct": true
+    },
+    {
+      "reference_token_ids": [
+        35923,
+        934,
+        12,
+        23,
+        17,
+        21,
+        20,
+        151643
+      ],
+      "replay_token_ids": [
+        35923,
+        934,
+        12,
+        23,
+        17,
+        21,
+        20,
+        151643
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " SOLAR-8265",
+      "replay_text": " SOLAR-8265",
+      "expected_answer": "SOLAR-8265",
+      "initial_task_correct": true,
+      "replay_task_correct": true
+    }
+  ]
+}

@@ -1,0 +1,362 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/gate_d_fair_async_probe/TinyLlama_TinyLlama_1.1B_intermediate_step_1431k_3T/async_cuszp_1e-5_trial_5.jsonl",
+  "num_events": 15,
+  "num_successful": 15,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "cuszp",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 1e-05,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    113,
+    113,
+    113,
+    113,
+    113,
+    113,
+    113,
+    113
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 1.0,
+  "exact_match_rate": 1.0,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 149.25408363342285,
+      "e2e_ms": 258.5468766337726,
+      "tpot_ms": 15.61325614290711,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 207.40628242492676,
+      "e2e_ms": 263.862936408259,
+      "tpot_ms": 8.065236283333174,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 205.81841468811035,
+      "e2e_ms": 262.27506867144257,
+      "tpot_ms": 8.065236283333174,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 327.3935317993164,
+      "e2e_ms": 477.86210878985,
+      "tpot_ms": 21.49551099864766,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 325.7298469543457,
+      "e2e_ms": 476.1984239448793,
+      "tpot_ms": 21.49551099864766,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 432.47008323669434,
+      "e2e_ms": 482.70347726065665,
+      "tpot_ms": 7.176199146280331,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 445.1136589050293,
+      "e2e_ms": 495.5424669024069,
+      "tpot_ms": 7.204115428196799,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 500.368595123291,
+      "e2e_ms": 540.5854561249726,
+      "tpot_ms": 5.745265857383076,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 64.27240371704102,
+      "e2e_ms": 119.29690570104867,
+      "tpot_ms": 7.860643140572522,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 55.364370346069336,
+      "e2e_ms": 107.99666334060021,
+      "tpot_ms": 7.518898999218696,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 68.28641891479492,
+      "e2e_ms": 118.58753190608695,
+      "tpot_ms": 7.18587328447029,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 150.55131912231445,
+      "e2e_ms": 204.424442112213,
+      "tpot_ms": 7.696160427128364,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 149.02400970458984,
+      "e2e_ms": 202.8971326944884,
+      "tpot_ms": 7.696160427128364,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 154.75106239318848,
+      "e2e_ms": 209.38268440659158,
+      "tpot_ms": 7.8045174304861575,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 161.74578666687012,
+      "e2e_ms": 208.51889366167597,
+      "tpot_ms": 6.681872427829409,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 222.91874885559082,
+      "e2e_ms": 264.9453868798446,
+      "tpot_ms": 6.003805432036253,
+      "generation_tokens": 8
+    }
+  ],
+  "mean_initial_e2e_ms": 407.19710184202995,
+  "mean_replay_e2e_ms": 179.50620508781867,
+  "mean_replay_ttft_ms": 128.36426496505737,
+  "mean_replay_tpot_ms": 7.305991446108757,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        29896,
+        29900,
+        29900,
+        29995,
+        13,
+        13724,
+        18203,
+        28598
+      ],
+      "replay_token_ids": [
+        29896,
+        29900,
+        29900,
+        29995,
+        13,
+        13724,
+        18203,
+        28598
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "100%\nNetwork packet sched",
+      "replay_text": "100%\nNetwork packet sched"
+    },
+    {
+      "reference_token_ids": [
+        13,
+        13,
+        2277,
+        29937,
+        529,
+        29874,
+        1024,
+        543
+      ],
+      "replay_token_ids": [
+        13,
+        13,
+        2277,
+        29937,
+        529,
+        29874,
+        1024,
+        543
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\n\n### <a name=\"",
+      "replay_text": "\n\n### <a name=\""
+    },
+    {
+      "reference_token_ids": [
+        29896,
+        29900,
+        29900,
+        29900,
+        29900,
+        29900,
+        29900,
+        29900
+      ],
+      "replay_token_ids": [
+        29896,
+        29900,
+        29900,
+        29900,
+        29900,
+        29900,
+        29900,
+        29900
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "10000000",
+      "replay_text": "10000000"
+    },
+    {
+      "reference_token_ids": [
+        13,
+        13,
+        2277,
+        29937,
+        3831,
+        3955,
+        13883,
+        4327
+      ],
+      "replay_token_ids": [
+        13,
+        13,
+        2277,
+        29937,
+        3831,
+        3955,
+        13883,
+        4327
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\n\n### Compiler optimization transform",
+      "replay_text": "\n\n### Compiler optimization transform"
+    },
+    {
+      "reference_token_ids": [
+        29896,
+        29900,
+        29900,
+        29995,
+        310,
+        278,
+        982,
+        304
+      ],
+      "replay_token_ids": [
+        29896,
+        29900,
+        29900,
+        29995,
+        310,
+        278,
+        982,
+        304
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "100% of the way to",
+      "replay_text": "100% of the way to"
+    },
+    {
+      "reference_token_ids": [
+        13,
+        13,
+        2277,
+        29937,
+        529,
+        29874,
+        1024,
+        543
+      ],
+      "replay_token_ids": [
+        13,
+        13,
+        2277,
+        29937,
+        529,
+        29874,
+        1024,
+        543
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\n\n### <a name=\"",
+      "replay_text": "\n\n### <a name=\""
+    },
+    {
+      "reference_token_ids": [
+        29896,
+        29900,
+        29900,
+        29995,
+        13,
+        13724,
+        18203,
+        28598
+      ],
+      "replay_token_ids": [
+        29896,
+        29900,
+        29900,
+        29995,
+        13,
+        13724,
+        18203,
+        28598
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "100%\nNetwork packet sched",
+      "replay_text": "100%\nNetwork packet sched"
+    },
+    {
+      "reference_token_ids": [
+        13,
+        13,
+        2277,
+        29937,
+        529,
+        29874,
+        1024,
+        543
+      ],
+      "replay_token_ids": [
+        13,
+        13,
+        2277,
+        29937,
+        529,
+        29874,
+        1024,
+        543
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\n\n### <a name=\"",
+      "replay_text": "\n\n### <a name=\""
+    }
+  ]
+}

@@ -1,0 +1,362 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/gate_d_fair_async_probe/facebook_opt_125m/async_raw_trial_4.jsonl",
+  "num_events": 14,
+  "num_successful": 14,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "raw",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    130,
+    130,
+    130,
+    130,
+    130,
+    130,
+    130,
+    130
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 0.90625,
+  "exact_match_rate": 0.875,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 51.0098934173584,
+      "e2e_ms": 136.8129684124142,
+      "tpot_ms": 12.257582142150827,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 89.71214294433594,
+      "e2e_ms": 139.0161799499765,
+      "tpot_ms": 7.043433857948652,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 177.34432220458984,
+      "e2e_ms": 241.6068272141274,
+      "tpot_ms": 9.180357858505365,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 180.33099174499512,
+      "e2e_ms": 244.0826557285618,
+      "tpot_ms": 9.107380569080956,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 281.4779281616211,
+      "e2e_ms": 344.54481716966256,
+      "tpot_ms": 9.009555572577353,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 285.1085662841797,
+      "e2e_ms": 344.37640829128213,
+      "tpot_ms": 8.466834572443206,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 354.03966903686523,
+      "e2e_ms": 381.6338440228719,
+      "tpot_ms": 3.942024998000956,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 355.93223571777344,
+      "e2e_ms": 380.5216427135747,
+      "tpot_ms": 3.512772427971608,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 14.28365707397461,
+      "e2e_ms": 42.72157308878377,
+      "tpot_ms": 4.062559430687023,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 15.836000442504883,
+      "e2e_ms": 40.958956436952576,
+      "tpot_ms": 3.5889937134925276,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 51.027774810791016,
+      "e2e_ms": 77.71421980578452,
+      "tpot_ms": 3.8123492849990726,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 53.093671798706055,
+      "e2e_ms": 77.68762880004942,
+      "tpot_ms": 3.5134224287633384,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 87.0819091796875,
+      "e2e_ms": 113.5175721719861,
+      "tpot_ms": 3.776523284614086,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 88.90676498413086,
+      "e2e_ms": 113.45804299344309,
+      "tpot_ms": 3.507325429901747,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 122.91193008422852,
+      "e2e_ms": 147.49643707182258,
+      "tpot_ms": 3.5120724267991528,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 124.76873397827148,
+      "e2e_ms": 146.13318999181502,
+      "tpot_ms": 3.052065144791933,
+      "generation_tokens": 8
+    }
+  ],
+  "mean_initial_e2e_ms": 276.5744179378089,
+  "mean_replay_e2e_ms": 94.96095254507964,
+  "mean_replay_ttft_ms": 69.73880529403687,
+  "mean_replay_tpot_ms": 3.6031638930061103,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        40321,
+        36440,
+        43401,
+        50118,
+        50118,
+        100,
+        33,
+        10
+      ],
+      "replay_token_ids": [
+        40321,
+        36440,
+        43401,
+        50118,
+        50118,
+        100,
+        33,
+        10
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "_______________________________________________\n\nI have a",
+      "replay_text": "_______________________________________________\n\nI have a"
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        40321,
+        36440,
+        43401,
+        50118,
+        50118,
+        43475,
+        5569,
+        1884
+      ],
+      "replay_token_ids": [
+        40321,
+        36440,
+        43401,
+        50118,
+        50118,
+        43475,
+        5569,
+        1884
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "_______________________________________________\n\nUrban rail planning",
+      "replay_text": "_______________________________________________\n\nUrban rail planning"
+    },
+    {
+      "reference_token_ids": [
+        40321,
+        45627,
+        1437,
+        40321,
+        45627,
+        1437,
+        40321,
+        45627
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 0.25,
+      "exact_match": false,
+      "reference_text": "______________________________________ ______________________________________ ______________________________________",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    }
+  ]
+}

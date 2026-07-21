@@ -29,6 +29,11 @@ os.environ["PYTHONPATH"] = (
 # this environment.  Select vLLM's supported native sampler before importing
 # vLLM; this does not change the attention or KV-cache transfer path.
 os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
+from benchmarks.prompt_workload import (
+    build_pressure_prompts,
+    build_warmup_prompts,
+)
+
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
@@ -53,6 +58,62 @@ def partition_prompt_batches(prompts, *, batch_all=False, batch_sizes=None):
     if batch_all:
         return [prompts]
     return [[prompt] for prompt in prompts]
+
+
+def run_open_loop(llm, prompts, sampling, *, interarrival_ms):
+    """Submit requests on a fixed wall-clock schedule while stepping vLLM."""
+    prompts = list(prompts)
+    interval_seconds = float(interarrival_ms) / 1000.0
+    if interval_seconds <= 0.0:
+        raise ValueError("open-loop interarrival must be positive")
+    engine = llm.llm_engine
+    if engine.has_unfinished_requests():
+        raise RuntimeError("open-loop workload requires an idle engine")
+
+    started_mono = time.perf_counter()
+    started_wall = time.time()
+    next_index = 0
+    request_ids = []
+    final_outputs = {}
+    while next_index < len(prompts) or engine.has_unfinished_requests():
+        elapsed = time.perf_counter() - started_mono
+        while (
+            next_index < len(prompts)
+            and next_index * interval_seconds <= elapsed
+        ):
+            request_id = str(next(llm.request_counter))
+            scheduled_arrival = started_wall + next_index * interval_seconds
+            engine.add_request(
+                request_id,
+                prompts[next_index],
+                sampling,
+                arrival_time=scheduled_arrival,
+            )
+            request_ids.append(request_id)
+            next_index += 1
+
+        if engine.has_unfinished_requests():
+            for output in engine.step():
+                if output.finished:
+                    final_outputs[output.request_id] = output
+            continue
+
+        if next_index < len(prompts):
+            next_due = next_index * interval_seconds
+            remaining = next_due - (time.perf_counter() - started_mono)
+            if remaining > 0.0:
+                time.sleep(min(remaining, 0.01))
+
+    if len(final_outputs) != len(request_ids):
+        raise RuntimeError("open-loop engine did not finish every request")
+    return [final_outputs[request_id] for request_id in request_ids]
+
+
+def contains_expected_answer(text, expected):
+    if expected is None:
+        return None
+    return str(expected).strip().casefold() in str(text).casefold()
+
 
 
 class H2DContender:
@@ -286,9 +347,18 @@ def main():
     )
     parser.add_argument(
         "--prompt-style",
-        choices=("shared", "disjoint"),
+        choices=("shared", "legacy_disjoint_v1", "disjoint"),
         default="shared",
-        help="Use legacy shared prefixes or distinct first-block prompt families.",
+        help=(
+            "Versioned workload style. legacy_disjoint_v1 reproduces the "
+            "archived Gate D/adaptive prompts; disjoint is the corrected "
+            "unique-stream protocol."
+        ),
+    )
+    parser.add_argument(
+        "--prompt-file",
+        default=None,
+        help="JSON list of prompt/expected_answer objects for task-level quality.",
     )
     parser.add_argument(
         "--batch-prompts",
@@ -301,6 +371,12 @@ def main():
         nargs="+",
         default=None,
         help="Explicit prompt submission phases, for example 1 1 6.",
+    )
+    parser.add_argument(
+        "--interarrival-ms",
+        type=float,
+        default=0.0,
+        help="Fixed open-loop request spacing; incompatible with prompt batching.",
     )
     parser.add_argument(
         "--replay-all",
@@ -325,6 +401,12 @@ def main():
         parser.error("--pcie-contender-mib cannot be negative")
     if args.pcie_contender_idle_us < 0:
         parser.error("--pcie-contender-idle-us cannot be negative")
+    if args.interarrival_ms < 0:
+        parser.error("--interarrival-ms cannot be negative")
+    if args.interarrival_ms > 0 and (
+        args.batch_prompts or args.prompt_batch_sizes
+    ):
+        parser.error("--interarrival-ms is incompatible with prompt batching")
     if args.prompt_batch_sizes:
         if any(size <= 0 for size in args.prompt_batch_sizes):
             parser.error("--prompt-batch-sizes values must be positive")
@@ -457,60 +539,68 @@ def main():
         seed=0,
     )
     sampling = SamplingParams(temperature=0.0, max_tokens=args.max_tokens)
-    base = "KV cache offloading over PCIe is useful because "
-    disjoint_seeds = [
-        "Network packet scheduling reduces congestion in datacenter switches. ",
-        "Astronomers measure distant galaxies using calibrated spectral sensors. ",
-        "Marine ecosystems depend on stable temperature and nutrient cycles. ",
-        "Compiler optimization transforms programs while preserving exact semantics. ",
-        "Urban rail planning balances passenger demand and station capacity. ",
-        "Medical imaging reconstructs internal structures from noisy measurements. ",
-    ]
     if args.warmup_offload:
         warmup_repeat = max(args.prompt_repeats)
-        warmup_prompts = [
-            (base + f"warmup stream {idx}. ") * warmup_repeat
-            for idx in range(6)
-        ]
+        warmup_prompts = build_warmup_prompts(warmup_repeat)
         for prompt in warmup_prompts:
             llm.generate([prompt], sampling)
         # MetricsRecorder opens the file per event, so removing the completed
         # warm-up trace safely starts a clean measured interval.
         if Path(metrics_path).exists():
             Path(metrics_path).unlink()
-    prompts = [
-        (
-            (base + f"experiment stream {idx}. ")
-            if args.prompt_style == "shared"
-            else disjoint_seeds[idx % len(disjoint_seeds)]
+    expected_answers = [None] * len(args.prompt_repeats)
+    if args.prompt_file:
+        prompt_items = json.loads(
+            Path(args.prompt_file).read_text(encoding="utf-8")
         )
-        * repeat
-        for idx, repeat in enumerate(args.prompt_repeats)
-    ]
+        if len(prompt_items) != len(args.prompt_repeats):
+            parser.error("--prompt-file count must match --prompt-repeats")
+        prompts = [str(item["prompt"]) for item in prompt_items]
+        expected_answers = [
+            str(item["expected_answer"]) for item in prompt_items
+        ]
+    else:
+        prompts = build_pressure_prompts(
+            args.prompt_repeats, style=args.prompt_style
+        )
     contender = H2DContender(
         args.pcie_contender_mib,
         idle_us=args.pcie_contender_idle_us,
     )
     contender.start()
-    initial_requests = []
-    for prompt_batch in partition_prompt_batches(
-        prompts,
-        batch_all=args.batch_prompts,
-        batch_sizes=args.prompt_batch_sizes,
-    ):
-        initial_requests.extend(llm.generate(prompt_batch, sampling))
+    initial_started = time.perf_counter()
+    if args.interarrival_ms > 0:
+        initial_requests = run_open_loop(
+            llm, prompts, sampling, interarrival_ms=args.interarrival_ms
+        )
+    else:
+        initial_requests = []
+        for prompt_batch in partition_prompt_batches(
+            prompts,
+            batch_all=args.batch_prompts,
+            batch_sizes=args.prompt_batch_sizes,
+        ):
+            initial_requests.extend(llm.generate(prompt_batch, sampling))
+    initial_wall_seconds = time.perf_counter() - initial_started
     initial_outputs = [request.outputs[0] for request in initial_requests]
     replay_prompts = prompts if args.replay_all else prompts[:1]
     replay_requests = []
     replay_batch_sizes = (
         args.prompt_batch_sizes if len(replay_prompts) == len(prompts) else None
     )
-    for prompt_batch in partition_prompt_batches(
-        replay_prompts,
-        batch_all=args.batch_prompts,
-        batch_sizes=replay_batch_sizes,
-    ):
-        replay_requests.extend(llm.generate(prompt_batch, sampling))
+    replay_started = time.perf_counter()
+    if args.interarrival_ms > 0:
+        replay_requests = run_open_loop(
+            llm, replay_prompts, sampling, interarrival_ms=args.interarrival_ms
+        )
+    else:
+        for prompt_batch in partition_prompt_batches(
+            replay_prompts,
+            batch_all=args.batch_prompts,
+            batch_sizes=replay_batch_sizes,
+        ):
+            replay_requests.extend(llm.generate(prompt_batch, sampling))
+    replay_wall_seconds = time.perf_counter() - replay_started
     replay_outputs = [request.outputs[0] for request in replay_requests]
     contender_stats = contender.stop()
     initial_timings = [
@@ -529,7 +619,9 @@ def main():
         )
 
     agreement = []
-    for initial, replayed in zip(initial_outputs, replay_outputs):
+    for initial, replayed, expected in zip(
+        initial_outputs, replay_outputs, expected_answers
+    ):
         reference_ids = list(initial.token_ids)
         replay_ids = list(replayed.token_ids)
         denominator = max(len(reference_ids), len(replay_ids), 1)
@@ -544,6 +636,13 @@ def main():
                 "exact_match": reference_ids == replay_ids,
                 "reference_text": initial.text,
                 "replay_text": replayed.text,
+                "expected_answer": expected,
+                "initial_task_correct": contains_expected_answer(
+                    initial.text, expected
+                ),
+                "replay_task_correct": contains_expected_answer(
+                    replayed.text, expected
+                ),
             }
         )
 
@@ -576,8 +675,13 @@ def main():
         "pcie_contender": contender_stats,
         "prompt_repeats": list(args.prompt_repeats),
         "prompt_style": args.prompt_style,
+        "prompt_file": args.prompt_file,
         "batch_prompts": args.batch_prompts,
         "prompt_batch_sizes": args.prompt_batch_sizes,
+        "interarrival_ms": args.interarrival_ms,
+        "offered_request_rate": (
+            1000.0 / args.interarrival_ms if args.interarrival_ms > 0 else None
+        ),
         "warmup_offload": args.warmup_offload,
         "num_replays": len(agreement),
         "mean_token_match_rate": (
@@ -586,8 +690,36 @@ def main():
         "exact_match_rate": (
             sum(item["exact_match"] for item in agreement) / len(agreement)
         ),
+        "initial_task_accuracy": (
+            sum(bool(item["initial_task_correct"]) for item in agreement)
+            / len(agreement)
+            if args.prompt_file else None
+        ),
+        "replay_task_accuracy": (
+            sum(bool(item["replay_task_correct"]) for item in agreement)
+            / len(agreement)
+            if args.prompt_file else None
+        ),
         "initial_request_timings": initial_timings,
         "replay_request_timings": replay_timings,
+        "initial_wall_ms": 1000 * initial_wall_seconds,
+        "replay_wall_ms": 1000 * replay_wall_seconds,
+        "initial_requests_per_second": (
+            len(initial_requests) / max(initial_wall_seconds, 1e-12)
+        ),
+        "replay_requests_per_second": (
+            len(replay_requests) / max(replay_wall_seconds, 1e-12)
+        ),
+        "initial_output_tokens_per_second": (
+            sum(item["generation_tokens"] for item in initial_timings)
+            / max(initial_wall_seconds, 1e-12)
+        ),
+        "replay_output_tokens_per_second": (
+            sum(item["generation_tokens"] for item in replay_timings)
+            / max(replay_wall_seconds, 1e-12)
+        ),
+        "num_initial_requests": len(initial_requests),
+        "num_replay_requests": len(replay_requests),
         "mean_initial_e2e_ms": (
             sum(item["e2e_ms"] for item in initial_timings) / len(initial_timings)
         ),

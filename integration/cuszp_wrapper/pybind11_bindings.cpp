@@ -130,6 +130,37 @@ PYBIND11_MODULE(cuszp_wrapper_cpp, m) {
              py::arg("source_layers"),
              py::arg("elements_per_layer"),
              py::arg("eps_overrides"))
+        .def("compress_batch_fixed_bf16_indexed_groups",
+             [](CuSZpWrapper& self,
+                const std::vector<torch::Tensor>& input_tensors,
+                const std::vector<torch::Tensor>& compressed_buffers,
+                const std::vector<torch::Tensor>& layer_indices,
+                const std::vector<size_t>& group_sizes,
+                size_t prefix_count,
+                size_t source_layers,
+                size_t elements_per_layer,
+                const std::vector<float>& eps_overrides) {
+                 std::vector<size_t> compressed_sizes;
+                 std::vector<float> actual_error_bounds;
+                 cudaStream_t stream =
+                     c10::cuda::getCurrentCUDAStream().stream();
+                 const bool success =
+                     self.compress_batch_fixed_bf16_indexed_groups(
+                         input_tensors, compressed_buffers, layer_indices,
+                         group_sizes, prefix_count, source_layers,
+                         elements_per_layer, eps_overrides,
+                         compressed_sizes, actual_error_bounds, stream);
+                 return py::make_tuple(
+                     success, compressed_sizes, actual_error_bounds);
+             },
+             py::arg("input_tensors"),
+             py::arg("compressed_buffers"),
+             py::arg("layer_indices"),
+             py::arg("group_sizes"),
+             py::arg("prefix_count"),
+             py::arg("source_layers"),
+             py::arg("elements_per_layer"),
+             py::arg("eps_overrides"))
         .def("decompress",
              [](CuSZpWrapper& self, torch::Tensor compressed_buffer, size_t compressed_size, torch::Tensor output_tensor, float actual_error_bound) {
                  cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();

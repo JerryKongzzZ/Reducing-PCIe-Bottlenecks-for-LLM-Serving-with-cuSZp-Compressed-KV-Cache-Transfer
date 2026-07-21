@@ -458,7 +458,10 @@ def test_fixed_bf16_batched_fast_path_round_trip(adaptive_uniform):
 
 
 
-def test_adaptive_fixed_segments_use_cross_page_bf16_batch_path():
+@pytest.mark.parametrize("lower_bound", [0.0, 1e-4])
+def test_adaptive_fixed_segments_use_cross_page_bf16_batch_path(
+    lower_bound,
+):
     from vllm.v1.kv_offload.base import (
         CanonicalKVCacheRef,
         CanonicalKVCaches,
@@ -495,7 +498,7 @@ def test_adaptive_fixed_segments_use_cross_page_bf16_batch_path():
         ],
     )
     selected_bounds = {
-        layer: (0.0 if layer < num_layers // 2 else 1e-5)
+        layer: (lower_bound if layer < num_layers // 2 else 1e-5)
         for layer in range(num_layers)
     }
 
@@ -526,6 +529,7 @@ def test_adaptive_fixed_segments_use_cross_page_bf16_batch_path():
         def __init__(self):
             self.batch_calls = 0
             self.indexed_calls = 0
+            self.indexed_group_calls = 0
 
         def compress_batch_fixed_bf16(self, *args):
             self.batch_calls += 1
@@ -534,6 +538,13 @@ def test_adaptive_fixed_segments_use_cross_page_bf16_batch_path():
         def compress_batch_fixed_bf16_indexed(self, *args):
             self.indexed_calls += 1
             return native_compressor.compress_batch_fixed_bf16_indexed(*args)
+
+        def compress_batch_fixed_bf16_indexed_groups(self, *args):
+            self.indexed_group_calls += 1
+            return (
+                native_compressor.
+                compress_batch_fixed_bf16_indexed_groups(*args)
+            )
 
         def __getattr__(self, name):
             return getattr(native_compressor, name)
@@ -575,14 +586,21 @@ def test_adaptive_fixed_segments_use_cross_page_bf16_batch_path():
     assert result.success
     assert result.transfer_size < num_pages * page_bytes
     assert counting_compressor.batch_calls == 0
-    assert counting_compressor.indexed_calls == 1
+    expected_indexed_calls = 1 if lower_bound == 0.0 else 0
+    expected_group_calls = 0 if lower_bound == 0.0 else 1
+    assert counting_compressor.indexed_calls == expected_indexed_calls
+    assert counting_compressor.indexed_group_calls == expected_group_calls
 
     stored_bundles = [
         handlers.gpu_to_cpu_handler.store.get(cpu_id) for cpu_id in cpu_ids
     ]
     assert all(len(bundle.segments) == 2 for bundle in stored_bundles)
+    expected_encodings = (
+        {"raw", "cuszp"} if lower_bound == 0.0 else {"cuszp"}
+    )
     assert all(
-        {segment.encoding for segment in bundle.segments} == {"raw", "cuszp"}
+        {segment.encoding for segment in bundle.segments}
+        == expected_encodings
         for bundle in stored_bundles
     )
 
@@ -594,16 +612,20 @@ def test_adaptive_fixed_segments_use_cross_page_bf16_batch_path():
         2, (cpu_blocks, gpu_destination)
     )
     assert handlers.cpu_to_gpu_handler.get_finished()[0].success
-    assert counting_decoder.indexed_scatter_calls == 1
+    assert (
+        counting_decoder.indexed_scatter_calls
+        == (1 if lower_bound == 0.0 else 2)
+    )
 
     restored = tensor[num_pages:].view(torch.bfloat16).view(
         num_pages, 2, num_layers, 2, 16, 64
     )
     reference = expected.view(num_pages, 2, num_layers, 2, 16, 64)
-    assert torch.equal(
-        restored[:, :, :num_layers // 2],
-        reference[:, :, :num_layers // 2],
-    )
+    if lower_bound == 0.0:
+        assert torch.equal(
+            restored[:, :, :num_layers // 2],
+            reference[:, :, :num_layers // 2],
+        )
     compressed_error = (
         restored[:, :, num_layers // 2:].to(torch.float32)
         - reference[:, :, num_layers // 2:].to(torch.float32)
@@ -615,6 +637,18 @@ def test_adaptive_fixed_segments_use_cross_page_bf16_batch_path():
     )
     assert torch.isfinite(restored).all()
     assert compressed_error <= max_bound * 2.0 + 1e-7
+    if lower_bound > 0.0:
+        lower_error = (
+            restored[:, :, :num_layers // 2].to(torch.float32)
+            - reference[:, :, :num_layers // 2].to(torch.float32)
+        ).abs().max().item()
+        lower_actual_bound = max(
+            segment.actual_error_bound
+            for bundle in stored_bundles
+            for segment in bundle.segments
+            if segment.requested_error_bound == lower_bound
+        )
+        assert lower_error <= lower_actual_bound * 2.0 + 1e-7
 
 
 def test_mixed_layer_policy_preserves_sensitive_layers_and_saves_bytes():
@@ -854,3 +888,58 @@ def test_async_store_waits_for_background_compression_and_restores_page():
         rtol=torch.finfo(torch.bfloat16).eps,
     )
     handlers.gpu_to_cpu_handler.shutdown()
+
+def test_packed_store_aligns_raw_bf16_after_odd_compressed_payload():
+    from integration.compression_pipeline.vllm_v1_compressed_offload import (
+        BundleComponent,
+        CompressedBundle,
+        CompressedPageStore,
+        EncodedSegment,
+    )
+
+    component = BundleComponent(
+        tensor_idx=0,
+        original_shape=(2,),
+        original_dtype=torch.bfloat16,
+        numel=2,
+        destination_view_shape=(2,),
+    )
+    odd_segment = EncodedSegment(
+        payload=torch.tensor([1, 2, 3], dtype=torch.uint8, device="cuda"),
+        compressed_size=3,
+        actual_error_bound=0.0,
+        encoding="lz4",
+        components=(component,),
+        unpadded_numel=2,
+        compressed_numel=2,
+        original_bytes=4,
+        requested_error_bound=0.0,
+    )
+    raw_values = torch.tensor(
+        [1.0, 2.0], dtype=torch.bfloat16, device="cuda"
+    )
+    raw_segment = EncodedSegment(
+        payload=raw_values.view(torch.uint8),
+        compressed_size=4,
+        actual_error_bound=0.0,
+        encoding="raw",
+        components=(component,),
+        unpadded_numel=2,
+        compressed_numel=2,
+        original_bytes=4,
+        requested_error_bound=0.0,
+    )
+    first = CompressedBundle(
+        segments=(odd_segment,), compressed_size=3, original_bytes=4
+    )
+    second = CompressedBundle(
+        segments=(raw_segment,), compressed_size=4, original_bytes=4
+    )
+
+    store = CompressedPageStore()
+    store.put_many_packed([(0, first), (1, second)])
+
+    stored_raw = store.get(1).segments[0].payload
+    assert stored_raw.storage_offset() % 8 == 0
+    assert stored_raw.numel() == raw_segment.compressed_size
+    assert torch.equal(stored_raw.view(torch.bfloat16), raw_values.cpu())

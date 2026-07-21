@@ -1,0 +1,480 @@
+{
+  "schema_version": 1,
+  "protocol": "infocom_gate_d_fair_async",
+  "methods": [
+    "async_raw",
+    "async_cuszp_1e-5",
+    "async_int8",
+    "async_zstd",
+    "async_lz4"
+  ],
+  "runner_environment": {
+    "VLLM_USE_V2_MODEL_RUNNER": "0"
+  },
+  "models": [
+    {
+      "model": "gpt2",
+      "status": "complete",
+      "aggregate": "data/gate_d_fair_async_probe/gpt2/aggregate.json",
+      "workload": {
+        "model": "gpt2",
+        "max_model_len": 1024,
+        "prompt_repeat": 65,
+        "kv_cache_memory_bytes": 134217728
+      },
+      "result": {
+        "model": "gpt2",
+        "num_trials": 5,
+        "quality_gate_passed": true,
+        "methods": {
+          "async_raw": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 17.151550633328345,
+            "cpu_to_gpu_ms": 1.8213987757917494,
+            "token_match_rate": 0.96875,
+            "exact_match_rate": 0.875,
+            "quality_passed": true
+          },
+          "async_cuszp_1e-5": {
+            "compression_ratio": 1.197836510881985,
+            "gpu_to_cpu_ms": 18.03928880447832,
+            "cpu_to_gpu_ms": 0.4542046990536619,
+            "token_match_rate": 0.96875,
+            "exact_match_rate": 0.875,
+            "quality_passed": true
+          },
+          "async_int8": {
+            "compression_ratio": 1.9999728736318139,
+            "gpu_to_cpu_ms": 46.790038724984264,
+            "cpu_to_gpu_ms": 2.0559824059697953,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          },
+          "async_zstd": {
+            "compression_ratio": 1.2514066370967232,
+            "gpu_to_cpu_ms": 64.66949428099075,
+            "cpu_to_gpu_ms": 22.01524906655929,
+            "token_match_rate": 0.96875,
+            "exact_match_rate": 0.875,
+            "quality_passed": true
+          },
+          "async_lz4": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 46.04729399725329,
+            "cpu_to_gpu_ms": 0.9022870748594869,
+            "token_match_rate": 0.96875,
+            "exact_match_rate": 0.875,
+            "quality_passed": true
+          }
+        }
+      }
+    },
+    {
+      "model": "facebook/opt-125m",
+      "status": "complete",
+      "aggregate": "data/gate_d_fair_async_probe/facebook_opt_125m/aggregate.json",
+      "workload": {
+        "model": "facebook/opt-125m",
+        "max_model_len": 2048,
+        "prompt_repeat": 130,
+        "kv_cache_memory_bytes": 134217728
+      },
+      "result": {
+        "model": "facebook/opt-125m",
+        "num_trials": 5,
+        "quality_gate_passed": false,
+        "methods": {
+          "async_raw": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 37.14637806503257,
+            "cpu_to_gpu_ms": 0.9932105233019684,
+            "token_match_rate": 0.90625,
+            "exact_match_rate": 0.875,
+            "quality_passed": true
+          },
+          "async_cuszp_1e-5": {
+            "compression_ratio": 1.1516256799472113,
+            "gpu_to_cpu_ms": 35.87892290088348,
+            "cpu_to_gpu_ms": 1.0302256006980315,
+            "token_match_rate": 0.90625,
+            "exact_match_rate": 0.875,
+            "quality_passed": true
+          },
+          "async_int8": {
+            "compression_ratio": 1.9999728736318139,
+            "gpu_to_cpu_ms": 67.18648728232698,
+            "cpu_to_gpu_ms": 3.3203665239852853,
+            "token_match_rate": 0.828125,
+            "exact_match_rate": 0.75,
+            "quality_passed": false
+          },
+          "async_zstd": {
+            "compression_ratio": 1.228770665103457,
+            "gpu_to_cpu_ms": 119.94657162410606,
+            "cpu_to_gpu_ms": 61.35677737474907,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          },
+          "async_lz4": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 94.59644226008095,
+            "cpu_to_gpu_ms": 0.9953695502190385,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          }
+        }
+      }
+    },
+    {
+      "model": "facebook/opt-350m",
+      "status": "complete",
+      "aggregate": "data/gate_d_fair_async_probe/facebook_opt_350m/aggregate.json",
+      "workload": {
+        "model": "facebook/opt-350m",
+        "max_model_len": 2048,
+        "prompt_repeat": 130,
+        "kv_cache_memory_bytes": 268435456
+      },
+      "result": {
+        "model": "facebook/opt-350m",
+        "num_trials": 5,
+        "quality_gate_passed": false,
+        "methods": {
+          "async_raw": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 82.3169930294777,
+            "cpu_to_gpu_ms": 0.8016512601170689,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          },
+          "async_cuszp_1e-5": {
+            "compression_ratio": 1.148644623395467,
+            "gpu_to_cpu_ms": 76.85082756991808,
+            "cpu_to_gpu_ms": 0.8891089604003355,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          },
+          "async_int8": {
+            "compression_ratio": 1.9999898275256982,
+            "gpu_to_cpu_ms": 105.56830948501427,
+            "cpu_to_gpu_ms": 2.7145430393284187,
+            "token_match_rate": 0.875,
+            "exact_match_rate": 0.875,
+            "quality_passed": false
+          },
+          "async_zstd": {
+            "compression_ratio": 1.248470870356354,
+            "gpu_to_cpu_ms": 256.34629611075593,
+            "cpu_to_gpu_ms": 104.43563106004149,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          },
+          "async_lz4": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 170.00721680136243,
+            "cpu_to_gpu_ms": 0.8461223798803985,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          }
+        }
+      }
+    },
+    {
+      "model": "EleutherAI/pythia-160m",
+      "status": "complete",
+      "aggregate": "data/gate_d_fair_async_probe/EleutherAI_pythia_160m/aggregate.json",
+      "workload": {
+        "model": "EleutherAI/pythia-160m",
+        "max_model_len": 2048,
+        "prompt_repeat": 127,
+        "kv_cache_memory_bytes": 134217728
+      },
+      "result": {
+        "model": "EleutherAI/pythia-160m",
+        "num_trials": 5,
+        "quality_gate_passed": false,
+        "methods": {
+          "async_raw": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 34.89426086501529,
+            "cpu_to_gpu_ms": 1.0200137250649277,
+            "token_match_rate": 0.5625,
+            "exact_match_rate": 0.5,
+            "quality_passed": true
+          },
+          "async_cuszp_1e-5": {
+            "compression_ratio": 1.270780835203181,
+            "gpu_to_cpu_ms": 34.149316599359736,
+            "cpu_to_gpu_ms": 0.9415328488103114,
+            "token_match_rate": 0.703125,
+            "exact_match_rate": 0.625,
+            "quality_passed": true
+          },
+          "async_int8": {
+            "compression_ratio": 1.9999728736318139,
+            "gpu_to_cpu_ms": 68.7041032826528,
+            "cpu_to_gpu_ms": 3.0775531246035825,
+            "token_match_rate": 0.515625,
+            "exact_match_rate": 0.5,
+            "quality_passed": false
+          },
+          "async_zstd": {
+            "compression_ratio": 1.2838129243446066,
+            "gpu_to_cpu_ms": 139.3585816025734,
+            "cpu_to_gpu_ms": 63.522241751343245,
+            "token_match_rate": 0.59375,
+            "exact_match_rate": 0.5,
+            "quality_passed": true
+          },
+          "async_lz4": {
+            "compression_ratio": 1.0299669878695863,
+            "gpu_to_cpu_ms": 105.3010289116563,
+            "cpu_to_gpu_ms": 36.74501014902489,
+            "token_match_rate": 0.59375,
+            "exact_match_rate": 0.5,
+            "quality_passed": true
+          }
+        }
+      }
+    },
+    {
+      "model": "EleutherAI/pythia-410m",
+      "status": "complete",
+      "aggregate": "data/gate_d_fair_async_probe/EleutherAI_pythia_410m/aggregate.json",
+      "workload": {
+        "model": "EleutherAI/pythia-410m",
+        "max_model_len": 2048,
+        "prompt_repeat": 127,
+        "kv_cache_memory_bytes": 268435456
+      },
+      "result": {
+        "model": "EleutherAI/pythia-410m",
+        "num_trials": 5,
+        "quality_gate_passed": false,
+        "methods": {
+          "async_raw": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 86.49325409787707,
+            "cpu_to_gpu_ms": 0.8230342599563301,
+            "token_match_rate": 0.8125,
+            "exact_match_rate": 0.625,
+            "quality_passed": true
+          },
+          "async_cuszp_1e-5": {
+            "compression_ratio": 1.2187578562920143,
+            "gpu_to_cpu_ms": 67.79252636673239,
+            "cpu_to_gpu_ms": 1.0195166588528082,
+            "token_match_rate": 0.796875,
+            "exact_match_rate": 0.75,
+            "quality_passed": false
+          },
+          "async_int8": {
+            "compression_ratio": 1.9999898275256982,
+            "gpu_to_cpu_ms": 110.26219802858708,
+            "cpu_to_gpu_ms": 2.790497757960111,
+            "token_match_rate": 0.5625,
+            "exact_match_rate": 0.5,
+            "quality_passed": false
+          },
+          "async_zstd": {
+            "compression_ratio": 1.2648660059850947,
+            "gpu_to_cpu_ms": 291.70370556863156,
+            "cpu_to_gpu_ms": 108.97170071897563,
+            "token_match_rate": 0.8125,
+            "exact_match_rate": 0.625,
+            "quality_passed": true
+          },
+          "async_lz4": {
+            "compression_ratio": 1.002051646167473,
+            "gpu_to_cpu_ms": 191.9593819678994,
+            "cpu_to_gpu_ms": 29.503767279093154,
+            "token_match_rate": 0.8125,
+            "exact_match_rate": 0.625,
+            "quality_passed": true
+          }
+        }
+      }
+    },
+    {
+      "model": "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",
+      "status": "complete",
+      "aggregate": "data/gate_d_fair_async_probe/TinyLlama_TinyLlama_1.1B_intermediate_step_1431k_3T/aggregate.json",
+      "workload": {
+        "model": "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",
+        "max_model_len": 2048,
+        "prompt_repeat": 113,
+        "kv_cache_memory_bytes": 134217728
+      },
+      "result": {
+        "model": "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",
+        "num_trials": 5,
+        "quality_gate_passed": false,
+        "methods": {
+          "async_raw": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 44.96115893513585,
+            "cpu_to_gpu_ms": 0.9527507529128343,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          },
+          "async_cuszp_1e-5": {
+            "compression_ratio": 1.243920608936477,
+            "gpu_to_cpu_ms": 42.85179743213424,
+            "cpu_to_gpu_ms": 5.443705024663359,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          },
+          "async_int8": {
+            "compression_ratio": 1.9999556117806334,
+            "gpu_to_cpu_ms": 95.09664239927328,
+            "cpu_to_gpu_ms": 3.0871386672111436,
+            "token_match_rate": 0.5625,
+            "exact_match_rate": 0.375,
+            "quality_passed": false
+          },
+          "async_zstd": {
+            "compression_ratio": 1.2150112695632649,
+            "gpu_to_cpu_ms": 112.41345871073592,
+            "cpu_to_gpu_ms": 49.1219667750152,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          },
+          "async_lz4": {
+            "compression_ratio": 1.0000409004427098,
+            "gpu_to_cpu_ms": 109.0945381312243,
+            "cpu_to_gpu_ms": 1.9278025784943666,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          }
+        }
+      }
+    },
+    {
+      "model": "Qwen/Qwen2.5-0.5B",
+      "status": "complete",
+      "aggregate": "data/gate_d_fair_async_probe/Qwen_Qwen2.5_0.5B/aggregate.json",
+      "workload": {
+        "model": "Qwen/Qwen2.5-0.5B",
+        "max_model_len": 4096,
+        "prompt_repeat": 260,
+        "kv_cache_memory_bytes": 134217728
+      },
+      "result": {
+        "model": "Qwen/Qwen2.5-0.5B",
+        "num_trials": 5,
+        "quality_gate_passed": false,
+        "methods": {
+          "async_raw": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 36.622735169172906,
+            "cpu_to_gpu_ms": 3.773782426287653,
+            "token_match_rate": 0.98125,
+            "exact_match_rate": 0.975,
+            "quality_passed": true
+          },
+          "async_cuszp_1e-5": {
+            "compression_ratio": 1.4812840841234445,
+            "gpu_to_cpu_ms": 42.54507126946313,
+            "cpu_to_gpu_ms": 5.324460875272052,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          },
+          "async_int8": {
+            "compression_ratio": 1.9999186231029011,
+            "gpu_to_cpu_ms": 100.1970009492652,
+            "cpu_to_gpu_ms": 6.57284542612615,
+            "token_match_rate": 0.609375,
+            "exact_match_rate": 0.5,
+            "quality_passed": false
+          },
+          "async_zstd": {
+            "compression_ratio": 1.2504438855792728,
+            "gpu_to_cpu_ms": 134.70616347476607,
+            "cpu_to_gpu_ms": 78.59340249997331,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          },
+          "async_lz4": {
+            "compression_ratio": 1.0024373820559045,
+            "gpu_to_cpu_ms": 129.0402136576761,
+            "cpu_to_gpu_ms": 60.68842592503643,
+            "token_match_rate": 1.0,
+            "exact_match_rate": 1.0,
+            "quality_passed": true
+          }
+        }
+      }
+    },
+    {
+      "model": "Qwen/Qwen2.5-1.5B",
+      "status": "complete",
+      "aggregate": "data/gate_d_fair_async_probe/Qwen_Qwen2.5_1.5B/aggregate.json",
+      "workload": {
+        "model": "Qwen/Qwen2.5-1.5B",
+        "max_model_len": 4096,
+        "prompt_repeat": 260,
+        "kv_cache_memory_bytes": 134217728
+      },
+      "result": {
+        "model": "Qwen/Qwen2.5-1.5B",
+        "num_trials": 5,
+        "quality_gate_passed": false,
+        "methods": {
+          "async_raw": {
+            "compression_ratio": 1.0,
+            "gpu_to_cpu_ms": 69.93133213448648,
+            "cpu_to_gpu_ms": 1.8949612200958654,
+            "token_match_rate": 0.875,
+            "exact_match_rate": 0.875,
+            "quality_passed": true
+          },
+          "async_cuszp_1e-5": {
+            "compression_ratio": 1.6144534283304175,
+            "gpu_to_cpu_ms": 42.21338943267862,
+            "cpu_to_gpu_ms": 1.8604376615257934,
+            "token_match_rate": 0.875,
+            "exact_match_rate": 0.875,
+            "quality_passed": true
+          },
+          "async_int8": {
+            "compression_ratio": 1.9999651233760571,
+            "gpu_to_cpu_ms": 151.18084120165025,
+            "cpu_to_gpu_ms": 4.842479201615788,
+            "token_match_rate": 0.375,
+            "exact_match_rate": 0.375,
+            "quality_passed": false
+          },
+          "async_zstd": {
+            "compression_ratio": 1.2678539902424828,
+            "gpu_to_cpu_ms": 227.36895831434853,
+            "cpu_to_gpu_ms": 92.37120624107774,
+            "token_match_rate": 0.875,
+            "exact_match_rate": 0.875,
+            "quality_passed": true
+          },
+          "async_lz4": {
+            "compression_ratio": 1.0010104543637672,
+            "gpu_to_cpu_ms": 193.64567620047768,
+            "cpu_to_gpu_ms": 47.41261324088555,
+            "token_match_rate": 0.875,
+            "exact_match_rate": 0.875,
+            "quality_passed": true
+          }
+        }
+      }
+    }
+  ]
+}

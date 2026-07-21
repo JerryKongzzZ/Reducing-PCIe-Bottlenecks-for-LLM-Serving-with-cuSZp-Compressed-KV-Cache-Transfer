@@ -1,0 +1,735 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/qwen1.5b_open_loop_arrival_v1/r6/async_raw_trial_1.jsonl",
+  "num_events": 32,
+  "num_successful": 32,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "raw",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    227,
+    227,
+    227,
+    227,
+    227,
+    227,
+    227,
+    227,
+    227,
+    227,
+    227,
+    227,
+    227,
+    227,
+    227,
+    227
+  ],
+  "prompt_style": "disjoint",
+  "prompt_file": null,
+  "batch_prompts": false,
+  "prompt_batch_sizes": null,
+  "interarrival_ms": 166.66666666666666,
+  "offered_request_rate": 6.0,
+  "warmup_offload": true,
+  "num_replays": 16,
+  "mean_token_match_rate": 1.0,
+  "exact_match_rate": 1.0,
+  "initial_task_accuracy": null,
+  "replay_task_accuracy": null,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 157.39750862121582,
+      "e2e_ms": 270.0075196335092,
+      "tpot_ms": 16.08714443032763,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 261.7461681365967,
+      "e2e_ms": 376.1823500972241,
+      "tpot_ms": 16.348025994375348,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 362.6117706298828,
+      "e2e_ms": 474.7038836358115,
+      "tpot_ms": 16.013159000846958,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 448.88758659362793,
+      "e2e_ms": 558.5676245973445,
+      "tpot_ms": 15.668576857673802,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 540.8976078033447,
+      "e2e_ms": 650.8569298312068,
+      "tpot_ms": 15.708474575408868,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 636.41357421875,
+      "e2e_ms": 749.3483812431805,
+      "tpot_ms": 16.133543860632926,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 734.868049621582,
+      "e2e_ms": 845.5803886754438,
+      "tpot_ms": 15.816048436265971,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 840.0030136108398,
+      "e2e_ms": 952.7353726443835,
+      "tpot_ms": 16.10462271907766,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 935.8184337615967,
+      "e2e_ms": 1052.4530907860026,
+      "tpot_ms": 16.662093860629415,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1024.2705345153809,
+      "e2e_ms": 1134.6051595173776,
+      "tpot_ms": 15.762089285999537,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1129.0411949157715,
+      "e2e_ms": 1241.4715139311738,
+      "tpot_ms": 16.061474145057478,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1234.7052097320557,
+      "e2e_ms": 1343.1578257586807,
+      "tpot_ms": 15.493230860946435,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1335.4072570800781,
+      "e2e_ms": 1445.2457370352931,
+      "tpot_ms": 15.691211422173572,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1446.4924335479736,
+      "e2e_ms": 1558.394041552674,
+      "tpot_ms": 15.985944000671484,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1554.1303157806396,
+      "e2e_ms": 1666.6542458115146,
+      "tpot_ms": 16.074847147267842,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1650.8848667144775,
+      "e2e_ms": 1758.367533737328,
+      "tpot_ms": 15.354666717550051,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 29.242515563964844,
+      "e2e_ms": 77.97085255151615,
+      "tpot_ms": 6.961190998221615,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 28.963088989257812,
+      "e2e_ms": 79.23328300239518,
+      "tpot_ms": 7.181456287591053,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 28.70917320251465,
+      "e2e_ms": 79.33035620953888,
+      "tpot_ms": 7.231597572432032,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 34.81245040893555,
+      "e2e_ms": 84.98160442104563,
+      "tpot_ms": 7.167022001730012,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 29.473304748535156,
+      "e2e_ms": 79.46265477221459,
+      "tpot_ms": 7.141335717668491,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 30.63035011291504,
+      "e2e_ms": 84.96699010720477,
+      "tpot_ms": 7.762377142041389,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 30.36189079284668,
+      "e2e_ms": 81.4354827743955,
+      "tpot_ms": 7.2962274259355455,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 29.160499572753906,
+      "e2e_ms": 79.23136657336727,
+      "tpot_ms": 7.152981000087623,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 29.825925827026367,
+      "e2e_ms": 79.12558782845736,
+      "tpot_ms": 7.042808857347284,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 28.44405174255371,
+      "e2e_ms": 78.90214578947052,
+      "tpot_ms": 7.2082991495595445,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 29.099225997924805,
+      "e2e_ms": 77.31765095377341,
+      "tpot_ms": 6.888346422264086,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 28.108835220336914,
+      "e2e_ms": 79.18829721165821,
+      "tpot_ms": 7.297065998760185,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 28.91826629638672,
+      "e2e_ms": 78.38445529341698,
+      "tpot_ms": 7.06659842814718,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 30.242204666137695,
+      "e2e_ms": 78.19068565731868,
+      "tpot_ms": 6.849782998740141,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 30.03215789794922,
+      "e2e_ms": 79.40428092842922,
+      "tpot_ms": 7.053160432925714,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 30.02452850341797,
+      "e2e_ms": 81.51232247473672,
+      "tpot_ms": 7.355399138759822,
+      "generation_tokens": 8
+    }
+  ],
+  "initial_wall_ms": 4258.0772819928825,
+  "replay_wall_ms": 2581.2826289911754,
+  "initial_requests_per_second": 3.7575644922328926,
+  "replay_requests_per_second": 6.198468862068455,
+  "initial_output_tokens_per_second": 30.06051593786314,
+  "replay_output_tokens_per_second": 49.58775089654764,
+  "num_initial_requests": 16,
+  "num_replay_requests": 16,
+  "mean_initial_e2e_ms": 1004.8957249055093,
+  "mean_replay_e2e_ms": 79.91487603430869,
+  "mean_replay_ttft_ms": 29.753029346466064,
+  "mean_replay_tpot_ms": 7.165978098263232,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        15,
+        13,
+        8141,
+        10151,
+        37852,
+        25271,
+        54046,
+        304
+      ],
+      "replay_token_ids": [
+        15,
+        13,
+        8141,
+        10151,
+        37852,
+        25271,
+        54046,
+        304
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "0. Network packet scheduling reduces congestion in",
+      "replay_text": "0. Network packet scheduling reduces congestion in",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        16,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727,
+        64917
+      ],
+      "replay_token_ids": [
+        16,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727,
+        64917
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "1. Astronomers measure distant galaxies",
+      "replay_text": "1. Astronomers measure distant galaxies",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        17,
+        13,
+        22963,
+        60851,
+        6761,
+        389,
+        15175,
+        9315
+      ],
+      "replay_token_ids": [
+        17,
+        13,
+        22963,
+        60851,
+        6761,
+        389,
+        15175,
+        9315
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "2. Marine ecosystems depend on stable temperature",
+      "replay_text": "2. Marine ecosystems depend on stable temperature",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        16,
+        13,
+        45631,
+        25262,
+        28475,
+        7468,
+        1393,
+        46895
+      ],
+      "replay_token_ids": [
+        16,
+        13,
+        45631,
+        25262,
+        28475,
+        7468,
+        1393,
+        46895
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "1. Compiler optimization transforms programs while preserving",
+      "replay_text": "1. Compiler optimization transforms programs while preserving",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        19,
+        13,
+        28322,
+        13569,
+        9115,
+        38854,
+        23148,
+        7479
+      ],
+      "replay_token_ids": [
+        19,
+        13,
+        28322,
+        13569,
+        9115,
+        38854,
+        23148,
+        7479
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "4. Urban rail planning balances passenger demand",
+      "replay_text": "4. Urban rail planning balances passenger demand",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        20,
+        13,
+        12939,
+        31658,
+        43828,
+        82,
+        5306,
+        14389
+      ],
+      "replay_token_ids": [
+        20,
+        13,
+        12939,
+        31658,
+        43828,
+        82,
+        5306,
+        14389
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "5. Medical imaging reconstructs internal structures",
+      "replay_text": "5. Medical imaging reconstructs internal structures",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        21,
+        13,
+        8141,
+        10151,
+        37852,
+        25271,
+        54046,
+        304
+      ],
+      "replay_token_ids": [
+        21,
+        13,
+        8141,
+        10151,
+        37852,
+        25271,
+        54046,
+        304
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "6. Network packet scheduling reduces congestion in",
+      "replay_text": "6. Network packet scheduling reduces congestion in",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        22,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727,
+        64917
+      ],
+      "replay_token_ids": [
+        22,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727,
+        64917
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "7. Astronomers measure distant galaxies",
+      "replay_text": "7. Astronomers measure distant galaxies",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        23,
+        13,
+        22963,
+        60851,
+        6761,
+        389,
+        15175,
+        9315
+      ],
+      "replay_token_ids": [
+        23,
+        13,
+        22963,
+        60851,
+        6761,
+        389,
+        15175,
+        9315
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "8. Marine ecosystems depend on stable temperature",
+      "replay_text": "8. Marine ecosystems depend on stable temperature",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        16,
+        15,
+        13,
+        45631,
+        25262,
+        28475,
+        7468,
+        1393
+      ],
+      "replay_token_ids": [
+        16,
+        15,
+        13,
+        45631,
+        25262,
+        28475,
+        7468,
+        1393
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "10. Compiler optimization transforms programs while",
+      "replay_text": "10. Compiler optimization transforms programs while",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        16,
+        15,
+        13,
+        28322,
+        13569,
+        9115,
+        38854,
+        23148
+      ],
+      "replay_token_ids": [
+        16,
+        15,
+        13,
+        28322,
+        13569,
+        9115,
+        38854,
+        23148
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "10. Urban rail planning balances passenger",
+      "replay_text": "10. Urban rail planning balances passenger",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        16,
+        16,
+        13,
+        12939,
+        31658,
+        43828,
+        82,
+        5306
+      ],
+      "replay_token_ids": [
+        16,
+        16,
+        13,
+        12939,
+        31658,
+        43828,
+        82,
+        5306
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "11. Medical imaging reconstructs internal",
+      "replay_text": "11. Medical imaging reconstructs internal",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        16,
+        17,
+        13,
+        8141,
+        10151,
+        37852,
+        25271,
+        54046
+      ],
+      "replay_token_ids": [
+        16,
+        17,
+        13,
+        8141,
+        10151,
+        37852,
+        25271,
+        54046
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "12. Network packet scheduling reduces congestion",
+      "replay_text": "12. Network packet scheduling reduces congestion",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        16,
+        18,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727
+      ],
+      "replay_token_ids": [
+        16,
+        18,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "13. Astronomers measure distant",
+      "replay_text": "13. Astronomers measure distant",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        16,
+        19,
+        13,
+        22963,
+        60851,
+        6761,
+        389,
+        15175
+      ],
+      "replay_token_ids": [
+        16,
+        19,
+        13,
+        22963,
+        60851,
+        6761,
+        389,
+        15175
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "14. Marine ecosystems depend on stable",
+      "replay_text": "14. Marine ecosystems depend on stable",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    },
+    {
+      "reference_token_ids": [
+        16,
+        20,
+        13,
+        45631,
+        25262,
+        28475,
+        7468,
+        1393
+      ],
+      "replay_token_ids": [
+        16,
+        20,
+        13,
+        45631,
+        25262,
+        28475,
+        7468,
+        1393
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "15. Compiler optimization transforms programs while",
+      "replay_text": "15. Compiler optimization transforms programs while",
+      "expected_answer": null,
+      "initial_task_correct": null,
+      "replay_task_correct": null
+    }
+  ]
+}

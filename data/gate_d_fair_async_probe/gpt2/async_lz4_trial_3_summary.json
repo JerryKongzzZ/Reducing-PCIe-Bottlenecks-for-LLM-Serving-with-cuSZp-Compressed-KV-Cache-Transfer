@@ -1,0 +1,362 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/gate_d_fair_async_probe/gpt2/async_lz4_trial_3.jsonl",
+  "num_events": 14,
+  "num_successful": 14,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "lz4",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    65,
+    65,
+    65,
+    65,
+    65,
+    65,
+    65,
+    65
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 0.96875,
+  "exact_match_rate": 0.875,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 27.501344680786133,
+      "e2e_ms": 202.45156169403344,
+      "tpot_ms": 24.992888144749617,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 57.335615158081055,
+      "e2e_ms": 219.71776516875252,
+      "tpot_ms": 23.197450001524494,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 56.448936462402344,
+      "e2e_ms": 218.8310864730738,
+      "tpot_ms": 23.197450001524494,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 55.51719665527344,
+      "e2e_ms": 217.8993466659449,
+      "tpot_ms": 23.197450001524494,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 54.63385581970215,
+      "e2e_ms": 217.01600583037362,
+      "tpot_ms": 23.197450001524494,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 245.31102180480957,
+      "e2e_ms": 312.9253207880538,
+      "tpot_ms": 9.65918556903489,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 295.93420028686523,
+      "e2e_ms": 319.47903826949187,
+      "tpot_ms": 3.363548283232376,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 295.1328754425049,
+      "e2e_ms": 318.6777134251315,
+      "tpot_ms": 3.363548283232376,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 12.910604476928711,
+      "e2e_ms": 76.27475945628248,
+      "tpot_ms": 9.052022139907681,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 15.697717666625977,
+      "e2e_ms": 79.78269466548227,
+      "tpot_ms": 9.154996714122328,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 57.85417556762695,
+      "e2e_ms": 87.64028357109055,
+      "tpot_ms": 4.2551582862090855,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 56.966543197631836,
+      "e2e_ms": 86.75265120109543,
+      "tpot_ms": 4.2551582862090855,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 56.12468719482422,
+      "e2e_ms": 85.91079519828781,
+      "tpot_ms": 4.2551582862090855,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 89.70212936401367,
+      "e2e_ms": 117.05197935225442,
+      "tpot_ms": 3.9071214268915355,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 92.62514114379883,
+      "e2e_ms": 119.86021112534218,
+      "tpot_ms": 3.890724283077621,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 99.37357902526855,
+      "e2e_ms": 123.28279804205522,
+      "tpot_ms": 3.4156027166838094,
+      "generation_tokens": 8
+    }
+  ],
+  "mean_initial_e2e_ms": 253.37472978935693,
+  "mean_replay_e2e_ms": 97.0695215764863,
+  "mean_replay_ttft_ms": 60.156822204589844,
+  "mean_replay_tpot_ms": 5.2732427674137785,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        22369,
+        12,
+        7311,
+        19638,
+        26925,
+        220,
+        22369,
+        12
+      ],
+      "replay_token_ids": [
+        22369,
+        12,
+        7311,
+        19638,
+        26925,
+        220,
+        22369,
+        12
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "------------------------- Network packet scheduling -------------------------",
+      "replay_text": "------------------------- Network packet scheduling -------------------------"
+    },
+    {
+      "reference_token_ids": [
+        1849,
+        33751,
+        1313,
+        21499,
+        3953,
+        12899,
+        27982,
+        1262
+      ],
+      "replay_token_ids": [
+        1849,
+        33751,
+        1313,
+        21499,
+        3953,
+        12899,
+        27982,
+        1262
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\u00a0Astronomers measure distant galaxies using",
+      "replay_text": "\u00a0Astronomers measure distant galaxies using"
+    },
+    {
+      "reference_token_ids": [
+        1849,
+        464,
+        1708,
+        318,
+        257,
+        1351,
+        286,
+        262
+      ],
+      "replay_token_ids": [
+        1849,
+        464,
+        1708,
+        318,
+        257,
+        1351,
+        286,
+        262
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\u00a0The following is a list of the",
+      "replay_text": "\u00a0The following is a list of the"
+    },
+    {
+      "reference_token_ids": [
+        22369,
+        6329,
+        3082,
+        5329,
+        23989,
+        6121,
+        4056,
+        220
+      ],
+      "replay_token_ids": [
+        22369,
+        6329,
+        3082,
+        5329,
+        23989,
+        31408,
+        4056,
+        981
+      ],
+      "token_match_rate": 0.75,
+      "exact_match": false,
+      "reference_text": "--------------------------- Compiler optimization transform programs ",
+      "replay_text": "--------------------------- Compiler optimization transforms programs while"
+    },
+    {
+      "reference_token_ids": [
+        1849,
+        46667,
+        6787,
+        5410,
+        318,
+        257,
+        5021,
+        12
+      ],
+      "replay_token_ids": [
+        1849,
+        46667,
+        6787,
+        5410,
+        318,
+        257,
+        5021,
+        12
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\u00a0Urban rail planning is a multi-",
+      "replay_text": "\u00a0Urban rail planning is a multi-"
+    },
+    {
+      "reference_token_ids": [
+        27193,
+        2602,
+        37405,
+        198,
+        198,
+        464,
+        1708,
+        318
+      ],
+      "replay_token_ids": [
+        27193,
+        2602,
+        37405,
+        198,
+        198,
+        464,
+        1708,
+        318
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "_______________________________________________________________________________\n\nThe following is",
+      "replay_text": "_______________________________________________________________________________\n\nThe following is"
+    },
+    {
+      "reference_token_ids": [
+        22369,
+        12,
+        7311,
+        19638,
+        26925,
+        220,
+        22369,
+        12
+      ],
+      "replay_token_ids": [
+        22369,
+        12,
+        7311,
+        19638,
+        26925,
+        220,
+        22369,
+        12
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "------------------------- Network packet scheduling -------------------------",
+      "replay_text": "------------------------- Network packet scheduling -------------------------"
+    },
+    {
+      "reference_token_ids": [
+        1849,
+        33751,
+        1313,
+        21499,
+        3953,
+        12899,
+        27982,
+        1262
+      ],
+      "replay_token_ids": [
+        1849,
+        33751,
+        1313,
+        21499,
+        3953,
+        12899,
+        27982,
+        1262
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\u00a0Astronomers measure distant galaxies using",
+      "replay_text": "\u00a0Astronomers measure distant galaxies using"
+    }
+  ]
+}

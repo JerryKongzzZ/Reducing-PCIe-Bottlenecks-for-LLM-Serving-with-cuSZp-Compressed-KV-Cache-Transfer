@@ -679,6 +679,194 @@ bool CuSZpWrapper::compress_batch_fixed_bf16_indexed(
     return check_cuda_error(
         "cuSZp indexed fixed BF16 batch compression failed");
 }
+
+bool CuSZpWrapper::compress_batch_fixed_bf16_indexed_groups(
+    const std::vector<torch::Tensor>& input_tensors,
+    const std::vector<torch::Tensor>& compressed_buffers,
+    const std::vector<torch::Tensor>& layer_indices,
+    const std::vector<size_t>& group_sizes,
+    size_t prefix_count,
+    size_t source_layers,
+    size_t elements_per_layer,
+    const std::vector<float>& eps_overrides,
+    std::vector<size_t>& compressed_sizes,
+    std::vector<float>& actual_error_bounds,
+    cudaStream_t stream) {
+    const size_t request_count = input_tensors.size();
+    if (request_count == 0 || compressed_buffers.size() != request_count ||
+        (!eps_overrides.empty() && eps_overrides.size() != request_count) ||
+        layer_indices.empty() || layer_indices.size() != group_sizes.size() ||
+        prefix_count == 0 || source_layers == 0 ||
+        elements_per_layer == 0 ||
+        config_.processing_dim != CUSZP_DIM_1D ||
+        config_.data_type != CUSZP_TYPE_FLOAT ||
+        config_.encoding_mode != CUSZP_MODE_FIXED) {
+        return false;
+    }
+
+    size_t grouped_request_count = 0;
+    size_t max_group_size = 0;
+    size_t max_workspace_entries = 0;
+    std::vector<size_t> blocks_per_page_by_group;
+    std::vector<size_t> entries_per_page_by_group;
+    std::vector<size_t> rate_bytes_by_group;
+    blocks_per_page_by_group.reserve(group_sizes.size());
+    entries_per_page_by_group.reserve(group_sizes.size());
+    rate_bytes_by_group.reserve(group_sizes.size());
+    constexpr size_t kElementsPerBlock = 32 * 1024;
+    for (size_t group = 0; group < group_sizes.size(); ++group) {
+        const torch::Tensor& indices = layer_indices[group];
+        const size_t selected_layers =
+            static_cast<size_t>(indices.numel());
+        if (group_sizes[group] == 0 || selected_layers == 0 ||
+            selected_layers > source_layers || !indices.is_cuda() ||
+            indices.scalar_type() != torch::kInt64 ||
+            !indices.is_contiguous() || indices.get_device() != device_id_) {
+            return false;
+        }
+        grouped_request_count += group_sizes[group];
+        max_group_size = std::max(max_group_size, group_sizes[group]);
+        const size_t num_elements =
+            prefix_count * selected_layers * elements_per_layer;
+        const size_t blocks_per_page =
+            (num_elements + kElementsPerBlock - 1) / kElementsPerBlock;
+        const size_t entries_per_page = blocks_per_page + 1;
+        max_workspace_entries = std::max(
+            max_workspace_entries, entries_per_page * group_sizes[group]);
+        blocks_per_page_by_group.push_back(blocks_per_page);
+        entries_per_page_by_group.push_back(entries_per_page);
+        rate_bytes_by_group.push_back(
+            blocks_per_page * kElementsPerBlock / 32);
+    }
+    if (grouped_request_count != request_count) {
+        return false;
+    }
+
+    const size_t source_elements =
+        prefix_count * source_layers * elements_per_layer;
+    std::vector<void*> host_inputs;
+    std::vector<unsigned char*> host_outputs;
+    host_inputs.reserve(request_count);
+    host_outputs.reserve(request_count);
+    size_t request_offset = 0;
+    for (size_t group = 0; group < group_sizes.size(); ++group) {
+        const size_t selected_layers =
+            static_cast<size_t>(layer_indices[group].numel());
+        const size_t selected_elements =
+            prefix_count * selected_layers * elements_per_layer;
+        const size_t required_capacity =
+            estimate_compressed_buffer_size(
+                selected_elements * sizeof(float));
+        for (size_t i = 0; i < group_sizes[group]; ++i) {
+            const torch::Tensor& input = input_tensors[request_offset + i];
+            const torch::Tensor& output =
+                compressed_buffers[request_offset + i];
+            if (!input.is_cuda() || !output.is_cuda() ||
+                input.scalar_type() != torch::kBFloat16 ||
+                output.scalar_type() != torch::kUInt8 ||
+                !input.is_contiguous() || !output.is_contiguous() ||
+                static_cast<size_t>(input.numel()) < source_elements ||
+                static_cast<size_t>(output.numel()) < required_capacity ||
+                input.get_device() != device_id_ ||
+                output.get_device() != device_id_) {
+                return false;
+            }
+            host_inputs.push_back(input.data_ptr());
+            host_outputs.push_back(output.data_ptr<unsigned char>());
+        }
+        request_offset += group_sizes[group];
+    }
+
+    actual_error_bounds.resize(request_count);
+    for (size_t i = 0; i < request_count; ++i) {
+        actual_error_bounds[i] =
+            (!eps_overrides.empty() && eps_overrides[i] > 0.0f)
+                ? eps_overrides[i]
+                : config_.error_bound;
+    }
+    if (!ensure_decompression_workspace(max_workspace_entries) ||
+        !ensure_batch_metadata(max_group_size) ||
+        !ensure_batch_output_metadata(max_group_size) ||
+        !ensure_batch_compression_metadata(max_group_size) ||
+        !ensure_batch_compressed_sizes_host(request_count)) {
+        return false;
+    }
+
+    request_offset = 0;
+    for (size_t group = 0; group < group_sizes.size(); ++group) {
+        const size_t group_size = group_sizes[group];
+        const size_t selected_layers =
+            static_cast<size_t>(layer_indices[group].numel());
+        const size_t entries_per_page = entries_per_page_by_group[group];
+        const size_t total_entries = entries_per_page * group_size;
+        cudaMemcpyAsync(
+            batch_output_ptrs_, host_inputs.data() + request_offset,
+            group_size * sizeof(void*), cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(
+            batch_compressed_output_ptrs_,
+            host_outputs.data() + request_offset,
+            group_size * sizeof(unsigned char*),
+            cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(
+            batch_error_bounds_,
+            actual_error_bounds.data() + request_offset,
+            group_size * sizeof(float), cudaMemcpyHostToDevice, stream);
+        cudaMemsetAsync(
+            decompression_cmp_offsets_, 0,
+            total_entries * sizeof(unsigned int), stream);
+        cudaMemsetAsync(
+            decompression_local_offsets_, 0,
+            total_entries * sizeof(unsigned int), stream);
+        cudaMemsetAsync(
+            decompression_flags_, 0, total_entries * sizeof(int), stream);
+
+        if (!launch_cuszp_compress_batch_fixed_bf16_indexed(
+                reinterpret_cast<const void* const*>(batch_output_ptrs_),
+                batch_compressed_output_ptrs_, decompression_cmp_offsets_,
+                decompression_local_offsets_, decompression_flags_,
+                batch_error_bounds_,
+                layer_indices[group].data_ptr<int64_t>(),
+                prefix_count, source_layers, elements_per_layer,
+                selected_layers, group_size,
+                config_.use_relative_error, stream)) {
+            return false;
+        }
+        cudaMemcpyAsync(
+            batch_error_bounds_host_ + request_offset,
+            batch_error_bounds_, group_size * sizeof(float),
+            cudaMemcpyDeviceToHost, stream);
+        const size_t blocks_per_page =
+            blocks_per_page_by_group[group];
+        for (size_t i = 0; i < group_size; ++i) {
+            cudaMemcpyAsync(
+                batch_compressed_sizes_host_ + request_offset + i,
+                decompression_cmp_offsets_ +
+                    i * entries_per_page + blocks_per_page,
+                sizeof(unsigned int), cudaMemcpyDeviceToHost, stream);
+        }
+        request_offset += group_size;
+    }
+    if (cudaStreamSynchronize(stream) != cudaSuccess) {
+        return false;
+    }
+
+    compressed_sizes.resize(request_count);
+    request_offset = 0;
+    for (size_t group = 0; group < group_sizes.size(); ++group) {
+        for (size_t i = 0; i < group_sizes[group]; ++i) {
+            const size_t request = request_offset + i;
+            actual_error_bounds[request] =
+                batch_error_bounds_host_[request];
+            compressed_sizes[request] =
+                static_cast<size_t>(batch_compressed_sizes_host_[request]) +
+                rate_bytes_by_group[group];
+        }
+        request_offset += group_sizes[group];
+    }
+    return check_cuda_error(
+        "cuSZp grouped indexed fixed BF16 batch compression failed");
+}
+
 bool CuSZpWrapper::decompress(
     torch::Tensor compressed_buffer,
     size_t compressed_size,

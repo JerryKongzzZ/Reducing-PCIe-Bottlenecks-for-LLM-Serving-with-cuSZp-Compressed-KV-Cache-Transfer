@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import os
+import shlex
 from pathlib import Path
 import statistics
 import subprocess
@@ -11,6 +12,11 @@ import sys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from reproducibility.provenance import collect_runtime_provenance
+
 SMOKE = REPO_ROOT / "benchmarks" / "smoke_vllm_compressed_offload.py"
 
 
@@ -31,6 +37,57 @@ def describe(values):
         "ci95_half_width": ci95(values),
         "trials": list(values),
     }
+
+
+def percentile(values, quantile):
+    """Return an R-7 linearly interpolated percentile."""
+    if not values:
+        raise ValueError("percentile requires at least one value")
+    if quantile < 0.0 or quantile > 1.0:
+        raise ValueError("quantile must be in [0, 1]")
+    ordered = sorted(float(value) for value in values)
+    position = (len(ordered) - 1) * quantile
+    lower = math.floor(position)
+    upper = math.ceil(position)
+    if lower == upper:
+        return ordered[lower]
+    weight = position - lower
+    return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
+
+
+def summarize_request_timings(
+    timings,
+    *,
+    slo_ttft_ms=0.0,
+    slo_e2e_ms=0.0,
+):
+    """Pool request timings before computing tails and SLO attainment."""
+    timings = list(timings)
+    result = {"count": len(timings)}
+    if not timings:
+        return result
+    for field in ("ttft_ms", "e2e_ms", "tpot_ms"):
+        values = [float(item[field]) for item in timings]
+        result[field] = {
+            "mean": statistics.mean(values),
+            "p50": percentile(values, 0.50),
+            "p95": percentile(values, 0.95),
+            "p99": percentile(values, 0.99),
+            "max": max(values),
+        }
+    result["slo"] = {}
+    for field, threshold in (
+        ("ttft_ms", float(slo_ttft_ms)),
+        ("e2e_ms", float(slo_e2e_ms)),
+    ):
+        if threshold > 0.0:
+            within = sum(float(item[field]) <= threshold for item in timings)
+            result["slo"][field] = {
+                "threshold_ms": threshold,
+                "attainment": within / len(timings),
+                "violations": len(timings) - within,
+            }
+    return result
 
 
 def method_error_bound(method, default_error_bound):
@@ -98,7 +155,27 @@ def trial_metrics(metrics_path, summary_path, stock_offload=False):
             if any(event.get("adaptive") for event in saves)
             else None
         ),
+        "_initial_request_timings": list(
+            summary.get("initial_request_timings", [])
+        ),
+        "_replay_request_timings": list(
+            summary.get("replay_request_timings", [])
+        ),
     }
+    optional_summary_metrics = {
+        "initial_wall_ms": "initial_wall_ms",
+        "replay_wall_ms": "replay_wall_ms",
+        "initial_requests_per_second": "initial_requests_per_second",
+        "replay_requests_per_second": "replay_requests_per_second",
+        "initial_output_tokens_per_second": "initial_output_tokens_per_second",
+        "replay_output_tokens_per_second": "replay_output_tokens_per_second",
+        "initial_task_accuracy": "initial_task_accuracy",
+        "replay_task_accuracy": "replay_task_accuracy",
+    }
+    for output_key, summary_key in optional_summary_metrics.items():
+        if summary_key in summary and summary[summary_key] is not None:
+            result[output_key] = summary[summary_key]
+
     if not stock_offload:
         result.update(
             {
@@ -196,6 +273,8 @@ def evaluate_quality_gate(
     min_exact_match_rate=0.0,
     max_token_match_drop=0.0,
     max_exact_match_drop=0.0,
+    min_task_accuracy=0.0,
+    max_task_accuracy_drop=0.0,
 ):
     """Require every trial to meet absolute and baseline-relative quality."""
     if baseline_method not in all_results:
@@ -219,9 +298,25 @@ def evaluate_quality_gate(
                 min_exact_match_rate,
                 baseline["exact_match_rate"] - max_exact_match_drop,
             )
+            task_available = (
+                "replay_task_accuracy" in baseline
+                and "replay_task_accuracy" in candidate
+            )
+            task_floor = (
+                max(
+                    min_task_accuracy,
+                    baseline["replay_task_accuracy"] - max_task_accuracy_drop,
+                )
+                if task_available else None
+            )
+            task_passed = (
+                candidate["replay_task_accuracy"] >= task_floor
+                if task_available else True
+            )
             passed = (
                 candidate["token_match_rate"] >= token_floor
                 and candidate["exact_match_rate"] >= exact_floor
+                and task_passed
             )
             check = {
                 "trial": index,
@@ -231,6 +326,13 @@ def evaluate_quality_gate(
                 "exact_match_floor": exact_floor,
                 "passed": passed,
             }
+            if task_available:
+                check.update(
+                    {
+                        "replay_task_accuracy": candidate["replay_task_accuracy"],
+                        "replay_task_accuracy_floor": task_floor,
+                    }
+                )
             trial_checks.append(check)
             if not passed:
                 failures.append({"method": method, **check})
@@ -245,6 +347,8 @@ def evaluate_quality_gate(
         "min_exact_match_rate": min_exact_match_rate,
         "max_token_match_drop": max_token_match_drop,
         "max_exact_match_drop": max_exact_match_drop,
+        "min_task_accuracy": min_task_accuracy,
+        "max_task_accuracy_drop": max_task_accuracy_drop,
         "methods": methods,
         "failures": failures,
     }
@@ -256,8 +360,9 @@ def main():
         nargs="+",
         choices=(
             "stock", "raw", "async_raw", "cuszp", "async_cuszp", "async_cuszp_1e-5",
-            "async_cuszp_1e-3", "int8", "zlib", "zstd", "async_zstd", "lz4",
-            "async_lz4", "adaptive", "async_adaptive"
+            "async_cuszp_1e-3", "int8", "async_int8", "zlib",
+            "async_zlib", "zstd", "async_zstd", "lz4", "async_lz4",
+            "adaptive", "async_adaptive"
         ),
         default=("raw", "cuszp", "int8", "zlib", "adaptive"),
     )
@@ -281,6 +386,16 @@ def main():
         action="store_true",
         help="Recompute aggregate.json from existing trial metrics and summaries.",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and print the top-level command without launching trials.",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Reuse complete trial metric/summary pairs and run only missing trials.",
+    )
     parser.add_argument("--out-dir", default="data/vllm_repeated_smoke")
     parser.add_argument("--model", default="Qwen/Qwen2.5-0.5B")
     parser.add_argument("--max-model-len", type=int, default=512)
@@ -294,9 +409,13 @@ def main():
         default=(32, 32, 32, 32, 32, 32),
     )
     parser.add_argument(
-        "--prompt-style", choices=("shared", "disjoint"), default="shared"
+        "--prompt-style",
+        choices=("shared", "legacy_disjoint_v1", "disjoint"),
+        default="shared",
     )
+    parser.add_argument("--prompt-file", default=None)
     parser.add_argument("--batch-prompts", action="store_true")
+    parser.add_argument("--interarrival-ms", type=float, default=0.0)
     parser.add_argument("--prompt-batch-sizes", type=int, nargs="+", default=None)
     parser.add_argument("--profile-restore-stages", action="store_true")
     parser.add_argument("--batch-restore-transfers", action="store_true")
@@ -327,6 +446,8 @@ def main():
     parser.add_argument("--cpu-offload-gb", type=float, default=1.0)
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.75)
     parser.add_argument("--max-tokens", type=int, default=8)
+    parser.add_argument("--slo-ttft-ms", type=float, default=0.0)
+    parser.add_argument("--slo-e2e-ms", type=float, default=0.0)
     parser.add_argument("--trial-timeout-seconds", type=int, default=900)
     parser.add_argument("--cost-aware-restore", action="store_true")
     parser.add_argument("--restore-h2d-bandwidth-gbps", type=float, default=0.0)
@@ -336,6 +457,8 @@ def main():
     parser.add_argument("--quality-min-exact-match-rate", type=float, default=0.0)
     parser.add_argument("--quality-max-token-match-drop", type=float, default=0.0)
     parser.add_argument("--quality-max-exact-match-drop", type=float, default=0.0)
+    parser.add_argument("--quality-min-task-accuracy", type=float, default=0.0)
+    parser.add_argument("--quality-max-task-accuracy-drop", type=float, default=0.0)
     parser.add_argument("--restore-ratio", nargs="*", default=[])
     parser.add_argument("--restore-decompression-gbps", nargs="*", default=[])
     parser.add_argument("--restore-fixed-overhead-ms", type=float, default=0.0)
@@ -352,6 +475,10 @@ def main():
         parser.error("--pcie-contender-mib cannot be negative")
     if args.pcie_contender_idle_us < 0:
         parser.error("--pcie-contender-idle-us cannot be negative")
+    if args.slo_ttft_ms < 0 or args.slo_e2e_ms < 0:
+        parser.error("SLO thresholds cannot be negative")
+    if args.interarrival_ms < 0:
+        parser.error("--interarrival-ms cannot be negative")
     if any("adaptive" in method for method in args.methods) and not args.adaptive_profile:
         parser.error("--adaptive-profile is required for the adaptive method")
     quality_values = (
@@ -359,6 +486,8 @@ def main():
         args.quality_min_exact_match_rate,
         args.quality_max_token_match_drop,
         args.quality_max_exact_match_drop,
+        args.quality_min_task_accuracy,
+        args.quality_max_task_accuracy_drop,
     )
     if any(value < 0.0 or value > 1.0 for value in quality_values):
         parser.error("quality thresholds and allowed drops must be in [0, 1]")
@@ -374,6 +503,15 @@ def main():
         if not args.restore_mode_profile and (
             not args.restore_ratio or not args.restore_decompression_gbps):
             parser.error("cost-aware restore requires calibration mappings")
+    if args.dry_run:
+        if args.aggregate_only or args.internal_single:
+            parser.error("--dry-run is only valid for a top-level experiment")
+        print(
+            "validated formal command: "
+            + shlex.join([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]]),
+            flush=True,
+        )
+        return 0
     if (
         args.trial_order == "interleaved"
         and not args.aggregate_only
@@ -409,6 +547,8 @@ def main():
     all_results = {}
     for method in args.methods:
         trials = []
+        pooled_initial_timings = []
+        pooled_replay_timings = []
         for trial in range(1, args.trials + 1):
             trial_number = trial + args.trial_offset
             stem = f"{method}_trial_{trial_number}"
@@ -422,7 +562,9 @@ def main():
                 codec = "cuszp"
             elif method == "async_raw":
                 codec = "raw"
-            elif method in ("async_zstd", "async_lz4"):
+            elif method in (
+                "async_int8", "async_zlib", "async_zstd", "async_lz4"
+            ):
                 codec = method.removeprefix("async_")
             else:
                 codec = "raw" if method == "stock" else method
@@ -447,6 +589,10 @@ def main():
                 "--replay-all",
                 "--warmup-offload",
             ]
+            if args.interarrival_ms > 0:
+                command.extend(["--interarrival-ms", str(args.interarrival_ms)])
+            if args.prompt_file:
+                command.extend(["--prompt-file", str(Path(args.prompt_file).resolve())])
             if method == "stock":
                 command.append("--stock-offload")
             if args.batch_prompts:
@@ -471,7 +617,8 @@ def main():
                     ])
             if method in (
                 "async_raw", "async_cuszp", "async_cuszp_1e-5", "async_cuszp_1e-3",
-                "async_zstd", "async_lz4", "async_adaptive"
+                "async_int8", "async_zlib", "async_zstd", "async_lz4",
+                "async_adaptive"
             ):
                 command.append("--async-store")
             if method in ("adaptive", "async_adaptive"):
@@ -508,11 +655,23 @@ def main():
                     command.extend(
                         ["--restore-mode-profile", args.restore_mode_profile]
                     )
+            complete_existing_trial = (
+                metrics_path.exists() and summary_path.exists()
+            )
+            partial_existing_trial = (
+                metrics_path.exists() != summary_path.exists()
+            )
+            if partial_existing_trial and args.resume:
+                parser.error(
+                    f"partial trial cannot be resumed safely: {stem}"
+                )
             if args.aggregate_only:
                 if not metrics_path.exists() or not summary_path.exists():
                     parser.error(
                         f"missing existing trial files for {method} trial {trial_number}"
                     )
+            elif args.resume and complete_existing_trial:
+                print(f"reusing complete {method} trial {trial_number}", flush=True)
             else:
                 print(f"running {method} trial {trial_number}", flush=True)
                 with log_path.open("w", encoding="utf-8") as log:
@@ -528,6 +687,12 @@ def main():
             trial_result = trial_metrics(
                 metrics_path, summary_path, method == "stock"
             )
+            pooled_initial_timings.extend(
+                trial_result.pop("_initial_request_timings")
+            )
+            pooled_replay_timings.extend(
+                trial_result.pop("_replay_request_timings")
+            )
             trial_result["configured_error_bound"] = method_error_bound(
                 method, args.error_bound
             )
@@ -540,9 +705,17 @@ def main():
             "token_match_rate",
             "exact_match_rate",
             "initial_e2e_ms",
+            "initial_task_accuracy",
+            "replay_task_accuracy",
             "replay_e2e_ms",
             "replay_ttft_ms",
             "replay_tpot_ms",
+            "initial_wall_ms",
+            "replay_wall_ms",
+            "initial_requests_per_second",
+            "replay_requests_per_second",
+            "initial_output_tokens_per_second",
+            "replay_output_tokens_per_second",
             "restore_cpu_decode_ms",
             "restore_h2d_ms",
             "restore_gpu_decode_ms",
@@ -562,6 +735,18 @@ def main():
         all_results[method]["configured_error_bound"] = trials[0][
             "configured_error_bound"
         ]
+        all_results[method]["request_latency_distribution"] = {
+            "initial": summarize_request_timings(
+                pooled_initial_timings,
+                slo_ttft_ms=args.slo_ttft_ms,
+                slo_e2e_ms=args.slo_e2e_ms,
+            ),
+            "replay": summarize_request_timings(
+                pooled_replay_timings,
+                slo_ttft_ms=args.slo_ttft_ms,
+                slo_e2e_ms=args.slo_e2e_ms,
+            ),
+        }
         all_results[method]["trial_details"] = trials
     paired_comparisons = {}
     if args.trial_order == "interleaved" and len(args.methods) > 1:
@@ -582,6 +767,7 @@ def main():
 
     output = {
         "schema_version": 1,
+        "provenance": collect_runtime_provenance(REPO_ROOT, args.model),
         "model": args.model,
         "num_trials": args.trials,
         "warmup_offload": True,
@@ -602,14 +788,20 @@ def main():
         "cpu_offload_gb": args.cpu_offload_gb,
         "gpu_memory_utilization": args.gpu_memory_utilization,
         "max_tokens": args.max_tokens,
+        "burst_slo_thresholds_ms": {
+            "ttft": args.slo_ttft_ms,
+            "e2e": args.slo_e2e_ms,
+        },
         "prompt_style": args.prompt_style,
         "batch_prompts": args.batch_prompts,
         "profile_restore_stages": args.profile_restore_stages,
+        "prompt_file": args.prompt_file,
         "batch_restore_transfers": args.batch_restore_transfers,
         "pcie_contender_mib": args.pcie_contender_mib,
         "pcie_contender_idle_us": args.pcie_contender_idle_us,
         "cost_aware_restore": args.cost_aware_restore,
         "prompt_batch_sizes": args.prompt_batch_sizes,
+        "interarrival_ms": args.interarrival_ms,
         "methods": all_results,
         "paired_comparisons": paired_comparisons,
     }
@@ -621,6 +813,8 @@ def main():
             min_exact_match_rate=args.quality_min_exact_match_rate,
             max_token_match_drop=args.quality_max_token_match_drop,
             max_exact_match_drop=args.quality_max_exact_match_drop,
+            min_task_accuracy=args.quality_min_task_accuracy,
+            max_task_accuracy_drop=args.quality_max_task_accuracy_drop,
         )
     else:
         output["quality_gate"] = {"enabled": False}
@@ -632,9 +826,11 @@ def main():
         and not args.internal_single
         and not output["quality_gate"]["passed"]
     ):
-        raise SystemExit(
-            f"quality gate failed; evidence retained in {output_path}"
+        print(
+            f"quality gate failed; evidence retained in {output_path}",
+            file=sys.stderr,
         )
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":

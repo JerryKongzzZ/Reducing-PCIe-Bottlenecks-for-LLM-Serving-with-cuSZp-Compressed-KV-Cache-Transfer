@@ -1,0 +1,362 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/gate_d_fair_async_probe/EleutherAI_pythia_410m/async_lz4_trial_5.jsonl",
+  "num_events": 16,
+  "num_successful": 16,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "lz4",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    127,
+    127,
+    127,
+    127,
+    127,
+    127,
+    127,
+    127
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 0.8125,
+  "exact_match_rate": 0.625,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 35.75730323791504,
+      "e2e_ms": 265.5505912262015,
+      "tpot_ms": 32.82761256975521,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 334.80286598205566,
+      "e2e_ms": 619.0011019643862,
+      "tpot_ms": 40.59974799747579,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 332.95369148254395,
+      "e2e_ms": 617.1519274648745,
+      "tpot_ms": 40.59974799747579,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 727.3344993591309,
+      "e2e_ms": 986.1686163640115,
+      "tpot_ms": 36.97630242926867,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 725.6865501403809,
+      "e2e_ms": 984.5206671452615,
+      "tpot_ms": 36.97630242926867,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1109.3757152557373,
+      "e2e_ms": 1329.1332392545883,
+      "tpot_ms": 31.39393199983585,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1185.0128173828125,
+      "e2e_ms": 1331.6175333748106,
+      "tpot_ms": 20.94353085599973,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1384.5832347869873,
+      "e2e_ms": 1429.0382667677477,
+      "tpot_ms": 6.3507188543943425,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 28.351306915283203,
+      "e2e_ms": 72.03117292374372,
+      "tpot_ms": 6.239980858351503,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 131.3776969909668,
+      "e2e_ms": 180.58825898333453,
+      "tpot_ms": 7.030080284623962,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 129.63223457336426,
+      "e2e_ms": 178.842796565732,
+      "tpot_ms": 7.030080284623962,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 262.96019554138184,
+      "e2e_ms": 307.30596254579723,
+      "tpot_ms": 6.335109572059342,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 261.1222267150879,
+      "e2e_ms": 305.4679937195033,
+      "tpot_ms": 6.335109572059342,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 390.0759220123291,
+      "e2e_ms": 433.6541190277785,
+      "tpot_ms": 6.225456716492772,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 388.4744644165039,
+      "e2e_ms": 432.0526614319533,
+      "tpot_ms": 6.225456716492772,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 484.6327304840088,
+      "e2e_ms": 530.112463486148,
+      "tpot_ms": 6.497104714591322,
+      "generation_tokens": 8
+    }
+  ],
+  "mean_initial_e2e_ms": 945.2727429452352,
+  "mean_replay_e2e_ms": 305.0069285854988,
+  "mean_replay_ttft_ms": 259.5783472061157,
+  "mean_replay_tpot_ms": 6.489797339911872,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        4118,
+        10701,
+        13138,
+        27387,
+        11355,
+        35367,
+        275,
+        2856
+      ],
+      "replay_token_ids": [
+        4118,
+        10701,
+        13138,
+        27387,
+        11355,
+        35367,
+        275,
+        2856
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "### Network packet scheduling reduces congestion in dat",
+      "replay_text": "### Network packet scheduling reduces congestion in dat"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        187,
+        510,
+        4477,
+        651,
+        751,
+        281,
+        5717
+      ],
+      "replay_token_ids": [
+        187,
+        187,
+        510,
+        18228,
+        16,
+        3123,
+        1934,
+        9052
+      ],
+      "token_match_rate": 0.375,
+      "exact_match": false,
+      "reference_text": "\n\nThe authors would like to thank",
+      "replay_text": "\n\nThe NASA/IPAC Ext"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        187,
+        510,
+        1563,
+        2829,
+        2722,
+        253,
+        1180
+      ],
+      "replay_token_ids": [
+        187,
+        187,
+        510,
+        1563,
+        2829,
+        2722,
+        253,
+        1180
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\n\nThe following table shows the number",
+      "replay_text": "\n\nThe following table shows the number"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        187,
+        5065,
+        6731,
+        13757,
+        29698,
+        5659,
+        1223
+      ],
+      "replay_token_ids": [
+        187,
+        187,
+        5065,
+        6731,
+        13757,
+        29698,
+        5659,
+        1223
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\n\nCompiler optimization transforms programs while",
+      "replay_text": "\n\nCompiler optimization transforms programs while"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        510,
+        1563,
+        2829,
+        2722,
+        253,
+        3388,
+        1180
+      ],
+      "replay_token_ids": [
+        187,
+        510,
+        1563,
+        2829,
+        2722,
+        253,
+        3388,
+        5312
+      ],
+      "token_match_rate": 0.875,
+      "exact_match": false,
+      "reference_text": "\nThe following table shows the average number",
+      "replay_text": "\nThe following table shows the average daily"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        187,
+        510,
+        4477,
+        11165,
+        642,
+        7344,
+        273
+      ],
+      "replay_token_ids": [
+        187,
+        187,
+        3138,
+        510,
+        33977,
+        1543,
+        323,
+        253
+      ],
+      "token_match_rate": 0.25,
+      "exact_match": false,
+      "reference_text": "\n\nThe authors declare no conflict of",
+      "replay_text": "\n\n![Theoretical results for the"
+    },
+    {
+      "reference_token_ids": [
+        4118,
+        10701,
+        13138,
+        27387,
+        11355,
+        35367,
+        275,
+        2856
+      ],
+      "replay_token_ids": [
+        4118,
+        10701,
+        13138,
+        27387,
+        11355,
+        35367,
+        275,
+        2856
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "### Network packet scheduling reduces congestion in dat",
+      "replay_text": "### Network packet scheduling reduces congestion in dat"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        187,
+        510,
+        4477,
+        11165,
+        642,
+        11771,
+        4832
+      ],
+      "replay_token_ids": [
+        187,
+        187,
+        510,
+        4477,
+        11165,
+        642,
+        11771,
+        4832
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\n\nThe authors declare no competing financial",
+      "replay_text": "\n\nThe authors declare no competing financial"
+    }
+  ]
+}

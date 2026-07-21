@@ -1,0 +1,136 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/qwen1.5b_real_concurrency_v3/c2/async_raw_trial_3.jsonl",
+  "num_events": 4,
+  "num_successful": 4,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "raw",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    227,
+    227
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 2,
+  "mean_token_match_rate": 1.0,
+  "exact_match_rate": 1.0,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 153.43379974365234,
+      "e2e_ms": 265.38154971785843,
+      "tpot_ms": 15.99253571060087,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 417.48738288879395,
+      "e2e_ms": 528.9224479056429,
+      "tpot_ms": 15.919295002406995,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 27.50873565673828,
+      "e2e_ms": 75.17996765091084,
+      "tpot_ms": 6.810175999167508,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 91.32146835327148,
+      "e2e_ms": 137.45306036435068,
+      "tpot_ms": 6.590227430154171,
+      "generation_tokens": 8
+    }
+  ],
+  "initial_wall_ms": 534.0178680198733,
+  "replay_wall_ms": 142.95486401533708,
+  "initial_requests_per_second": 3.745193035236736,
+  "replay_requests_per_second": 13.99042987292428,
+  "initial_output_tokens_per_second": 29.96154428189389,
+  "replay_output_tokens_per_second": 111.92343898339423,
+  "num_initial_requests": 2,
+  "num_replay_requests": 2,
+  "mean_initial_e2e_ms": 397.1519988117507,
+  "mean_replay_e2e_ms": 106.31651400763076,
+  "mean_replay_ttft_ms": 59.41510200500488,
+  "mean_replay_tpot_ms": 6.700201714660839,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        15,
+        13,
+        8141,
+        10151,
+        37852,
+        25271,
+        54046,
+        304
+      ],
+      "replay_token_ids": [
+        15,
+        13,
+        8141,
+        10151,
+        37852,
+        25271,
+        54046,
+        304
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "0. Network packet scheduling reduces congestion in",
+      "replay_text": "0. Network packet scheduling reduces congestion in"
+    },
+    {
+      "reference_token_ids": [
+        16,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727,
+        64917
+      ],
+      "replay_token_ids": [
+        16,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727,
+        64917
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "1. Astronomers measure distant galaxies",
+      "replay_text": "1. Astronomers measure distant galaxies"
+    }
+  ]
+}

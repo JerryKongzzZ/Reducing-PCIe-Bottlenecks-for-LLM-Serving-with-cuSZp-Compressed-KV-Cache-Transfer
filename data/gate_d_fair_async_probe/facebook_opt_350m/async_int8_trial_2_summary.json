@@ -1,0 +1,362 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/gate_d_fair_async_probe/facebook_opt_350m/async_int8_trial_2.jsonl",
+  "num_events": 17,
+  "num_successful": 17,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "int8",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    130,
+    130,
+    130,
+    130,
+    130,
+    130,
+    130,
+    130
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 0.875,
+  "exact_match_rate": 0.875,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 105.07440567016602,
+      "e2e_ms": 193.2407256681472,
+      "tpot_ms": 12.59518857114017,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 292.54150390625,
+      "e2e_ms": 408.9172568928916,
+      "tpot_ms": 16.625107569520228,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 290.5921936035156,
+      "e2e_ms": 406.9679465901572,
+      "tpot_ms": 16.625107569520228,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 485.4881763458252,
+      "e2e_ms": 609.6042153658345,
+      "tpot_ms": 17.73086271714419,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 483.4873676300049,
+      "e2e_ms": 607.6034066500142,
+      "tpot_ms": 17.73086271714419,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 623.3780384063721,
+      "e2e_ms": 738.3022113936022,
+      "tpot_ms": 16.417738998175732,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 809.5459938049316,
+      "e2e_ms": 850.7114897947758,
+      "tpot_ms": 5.880785141406315,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 871.1135387420654,
+      "e2e_ms": 910.2070387452841,
+      "tpot_ms": 5.5847857147455215,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 23.859739303588867,
+      "e2e_ms": 61.73718732316047,
+      "tpot_ms": 5.411064002795944,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 80.84487915039062,
+      "e2e_ms": 122.69306214875542,
+      "tpot_ms": 5.978311856909256,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 78.90200614929199,
+      "e2e_ms": 120.75018914765678,
+      "tpot_ms": 5.978311856909256,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 144.4683074951172,
+      "e2e_ms": 183.96877648774534,
+      "tpot_ms": 5.642924141804023,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 142.63510704040527,
+      "e2e_ms": 182.13557603303343,
+      "tpot_ms": 5.642924141804023,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 203.39679718017578,
+      "e2e_ms": 242.01978917699307,
+      "tpot_ms": 5.517570285259613,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 261.9738578796387,
+      "e2e_ms": 300.90979888336733,
+      "tpot_ms": 5.562277286246951,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 320.2250003814697,
+      "e2e_ms": 360.1072283636313,
+      "tpot_ms": 5.697461140308795,
+      "generation_tokens": 8
+    }
+  ],
+  "mean_initial_e2e_ms": 590.6942863875884,
+  "mean_replay_e2e_ms": 196.7902009455429,
+  "mean_replay_ttft_ms": 157.03821182250977,
+  "mean_replay_tpot_ms": 5.6788555890047325,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        3658,
+        29635,
+        19114,
+        13458,
+        15744,
+        11,
+        13516,
+        1043
+      ],
+      "replay_token_ids": [
+        3658,
+        29635,
+        19114,
+        13458,
+        15744,
+        11,
+        13516,
+        1043
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " Network packet scheduling reduces congestion in datac",
+      "replay_text": " Network packet scheduling reduces congestion in datac"
+    },
+    {
+      "reference_token_ids": [
+        24494,
+        27312,
+        2450,
+        13258,
+        30948,
+        634,
+        42422,
+        45113
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 0.0,
+      "exact_match": false,
+      "reference_text": " Astronomers measure distant galaxies using calibrated spectral",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        10081,
+        10329,
+        25212,
+        33622,
+        1767,
+        150,
+        18368,
+        6089
+      ],
+      "replay_token_ids": [
+        10081,
+        10329,
+        25212,
+        33622,
+        1767,
+        150,
+        18368,
+        6089
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " Compiler optimization transforms programs while preserving exact",
+      "replay_text": " Compiler optimization transforms programs while preserving exact"
+    },
+    {
+      "reference_token_ids": [
+        8595,
+        5569,
+        1884,
+        17172,
+        4408,
+        1077,
+        8,
+        1992
+      ],
+      "replay_token_ids": [
+        8595,
+        5569,
+        1884,
+        17172,
+        4408,
+        1077,
+        8,
+        1992
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " Urban rail planning balances passenger demand and station",
+      "replay_text": " Urban rail planning balances passenger demand and station"
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    },
+    {
+      "reference_token_ids": [
+        3658,
+        29635,
+        19114,
+        13458,
+        15744,
+        11,
+        13516,
+        1043
+      ],
+      "replay_token_ids": [
+        3658,
+        29635,
+        19114,
+        13458,
+        15744,
+        11,
+        13516,
+        1043
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " Network packet scheduling reduces congestion in datac",
+      "replay_text": " Network packet scheduling reduces congestion in datac"
+    },
+    {
+      "reference_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "replay_token_ids": [
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437,
+        1437
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "        ",
+      "replay_text": "        "
+    }
+  ]
+}

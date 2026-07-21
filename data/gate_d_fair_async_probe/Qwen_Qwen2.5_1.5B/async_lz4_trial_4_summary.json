@@ -1,0 +1,362 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/gate_d_fair_async_probe/Qwen_Qwen2.5_1.5B/async_lz4_trial_4.jsonl",
+  "num_events": 17,
+  "num_successful": 17,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "lz4",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    260,
+    260,
+    260,
+    260,
+    260,
+    260,
+    260,
+    260
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 0.875,
+  "exact_match_rate": 0.875,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 123.19493293762207,
+      "e2e_ms": 319.27338693640195,
+      "tpot_ms": 28.01120771411141,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 425.5557060241699,
+      "e2e_ms": 625.5325350502972,
+      "tpot_ms": 28.56811843230389,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 731.2493324279785,
+      "e2e_ms": 925.476401404012,
+      "tpot_ms": 27.746724139433354,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1009.3193054199219,
+      "e2e_ms": 1175.8464504091535,
+      "tpot_ms": 23.7895921413188,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1285.0837707519531,
+      "e2e_ms": 1480.7187177357264,
+      "tpot_ms": 27.947849569110467,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1575.258731842041,
+      "e2e_ms": 1775.1382658607326,
+      "tpot_ms": 28.554219145527377,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1864.013433456421,
+      "e2e_ms": 1914.6400594618171,
+      "tpot_ms": 7.232375143628035,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 1956.608772277832,
+      "e2e_ms": 2004.3733382772189,
+      "tpot_ms": 6.823509428483833,
+      "generation_tokens": 8
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 50.577640533447266,
+      "e2e_ms": 101.21065654675476,
+      "tpot_ms": 7.233288001901071,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 127.81095504760742,
+      "e2e_ms": 177.1926470391918,
+      "tpot_ms": 7.054527427369196,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 257.7989101409912,
+      "e2e_ms": 310.29625111841597,
+      "tpot_ms": 7.499620139632108,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 391.03221893310547,
+      "e2e_ms": 441.6743529145606,
+      "tpot_ms": 7.234590568779303,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 521.6600894927979,
+      "e2e_ms": 576.3432955136523,
+      "tpot_ms": 7.811886574407773,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 659.5885753631592,
+      "e2e_ms": 707.3370983707719,
+      "tpot_ms": 6.821217572516097,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 785.9528064727783,
+      "e2e_ms": 834.3502634670585,
+      "tpot_ms": 6.913922427754317,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 875.2291202545166,
+      "e2e_ms": 925.1461992389522,
+      "tpot_ms": 7.131011283490807,
+      "generation_tokens": 8
+    }
+  ],
+  "mean_initial_e2e_ms": 1277.62489439192,
+  "mean_replay_e2e_ms": 509.19384552616975,
+  "mean_replay_ttft_ms": 458.7062895298004,
+  "mean_replay_tpot_ms": 7.212507999481334,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        8141,
+        10151,
+        37852,
+        25271,
+        54046,
+        304,
+        821,
+        3057
+      ],
+      "replay_token_ids": [
+        8141,
+        10151,
+        37852,
+        25271,
+        54046,
+        304,
+        821,
+        3057
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " Network packet scheduling reduces congestion in datacenter",
+      "replay_text": " Network packet scheduling reduces congestion in datacenter"
+    },
+    {
+      "reference_token_ids": [
+        16,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727,
+        64917
+      ],
+      "replay_token_ids": [
+        16,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727,
+        64917
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "1. Astronomers measure distant galaxies",
+      "replay_text": "1. Astronomers measure distant galaxies"
+    },
+    {
+      "reference_token_ids": [
+        3555,
+        594,
+        279,
+        1790,
+        11652,
+        30,
+        220,
+        78191
+      ],
+      "replay_token_ids": [
+        3555,
+        594,
+        279,
+        1790,
+        11652,
+        30,
+        220,
+        78191
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " What's the next sentence?  Choices",
+      "replay_text": " What's the next sentence?  Choices"
+    },
+    {
+      "reference_token_ids": [
+        54275,
+        220,
+        54275,
+        220,
+        54275,
+        220,
+        54275,
+        220
+      ],
+      "replay_token_ids": [
+        16,
+        13,
+        45631,
+        25262,
+        28475,
+        7468,
+        1393,
+        46895
+      ],
+      "token_match_rate": 0.0,
+      "exact_match": false,
+      "reference_text": " ```  ```  ```  ``` ",
+      "replay_text": "1. Compiler optimization transforms programs while preserving"
+    },
+    {
+      "reference_token_ids": [
+        16,
+        13,
+        28322,
+        13569,
+        9115,
+        38854,
+        23148,
+        7479
+      ],
+      "replay_token_ids": [
+        16,
+        13,
+        28322,
+        13569,
+        9115,
+        38854,
+        23148,
+        7479
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "1. Urban rail planning balances passenger demand",
+      "replay_text": "1. Urban rail planning balances passenger demand"
+    },
+    {
+      "reference_token_ids": [
+        16,
+        13,
+        12939,
+        31658,
+        43828,
+        82,
+        5306,
+        14389
+      ],
+      "replay_token_ids": [
+        16,
+        13,
+        12939,
+        31658,
+        43828,
+        82,
+        5306,
+        14389
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "1. Medical imaging reconstructs internal structures",
+      "replay_text": "1. Medical imaging reconstructs internal structures"
+    },
+    {
+      "reference_token_ids": [
+        8141,
+        10151,
+        37852,
+        25271,
+        54046,
+        304,
+        821,
+        3057
+      ],
+      "replay_token_ids": [
+        8141,
+        10151,
+        37852,
+        25271,
+        54046,
+        304,
+        821,
+        3057
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": " Network packet scheduling reduces congestion in datacenter",
+      "replay_text": " Network packet scheduling reduces congestion in datacenter"
+    },
+    {
+      "reference_token_ids": [
+        16,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727,
+        64917
+      ],
+      "replay_token_ids": [
+        16,
+        13,
+        38516,
+        14274,
+        388,
+        6629,
+        28727,
+        64917
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "1. Astronomers measure distant galaxies",
+      "replay_text": "1. Astronomers measure distant galaxies"
+    }
+  ]
+}

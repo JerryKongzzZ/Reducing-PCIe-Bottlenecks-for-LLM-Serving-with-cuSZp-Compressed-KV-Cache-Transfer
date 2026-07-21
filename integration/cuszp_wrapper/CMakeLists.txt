@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find dependencies
-find_package(CUDA REQUIRED)
+find_package(CUDAToolkit REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 find_package(pybind11 REQUIRED)
 # 👉 New: Find Torch library
@@ -15,8 +15,10 @@ find_package(Torch REQUIRED)
 find_library(TORCH_PYTHON_LIB torch_python PATHS "${TORCH_INSTALL_PREFIX}/lib")
 
 # Find cuSZp
-# cuSZp installed in /opt/cuSZp/install
-set(CUSZP_ROOT "/opt/cuSZp")
+# The paper snapshot uses /opt/cuSZp, but callers may provide a pinned checkout
+# with -DCUSZP_ROOT=/path/to/cuSZp.
+set(CUSZP_ROOT "/opt/cuSZp" CACHE PATH "Path to a cuSZp source/install tree")
+message(STATUS "Using configured cuSZp root")
 set(CUSZP_INSTALL_DIR "${CUSZP_ROOT}/install")
 
 # cuSZp include paths
@@ -40,7 +42,7 @@ find_library(CUSZP_LIB
 # Include directories
 include_directories(
     ${CUSZP_INCLUDE_DIRS}
-    ${CUDA_INCLUDE_DIRS}
+    ${CUDAToolkit_INCLUDE_DIRS}
     ${Python3_INCLUDE_DIRS}
     ${pybind11_INCLUDE_DIRS}
 )
@@ -59,8 +61,7 @@ pybind11_add_module(cuszp_wrapper_cpp ${SOURCES})
 # Link libraries
 target_link_libraries(cuszp_wrapper_cpp PRIVATE
     ${CUSZP_LIB}
-    ${CUDA_LIBRARIES}
-    ${CUDA_CUDART_LIBRARY}
+    CUDA::cudart
     ${TORCH_LIBRARIES}
     ${TORCH_PYTHON_LIB}    # 👉 Modified: Use absolute path variable
 )

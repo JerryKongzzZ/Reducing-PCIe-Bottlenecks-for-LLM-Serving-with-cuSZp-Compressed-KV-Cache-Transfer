@@ -60,6 +60,15 @@ def prompt_suite_fingerprint(prompts):
     return hashlib.sha256(canonical).hexdigest()
 
 
+def reproducible_path(path):
+    """Record repository inputs without machine-specific absolute prefixes."""
+    resolved = Path(path).resolve()
+    try:
+        return resolved.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return str(resolved)
+
+
 def _detail_by_bound(layer_entry):
     return {float(item["eps"]): item for item in layer_entry["details"]}
 
@@ -233,7 +242,7 @@ def main():
             parser.error(f"missing per-prompt profile: {profile_path}")
         profile = json.loads(profile_path.read_text(encoding="utf-8"))
         named_profiles.append((prompt["id"], profile))
-        source_profiles.append(str(profile_path))
+        source_profiles.append(reproducible_path(profile_path))
 
     result = merge_profiles(
         named_profiles,
@@ -242,7 +251,7 @@ def main():
         error_bounds=args.eps,
     )
     result["_metadata"].update({
-        "prompt_suite": str(Path(args.prompts_file).resolve()),
+        "prompt_suite": reproducible_path(args.prompts_file),
         "prompt_suite_sha256": prompt_suite_fingerprint(prompts),
         "probe_tokens": args.probe_tokens,
         "source_profiles": source_profiles,

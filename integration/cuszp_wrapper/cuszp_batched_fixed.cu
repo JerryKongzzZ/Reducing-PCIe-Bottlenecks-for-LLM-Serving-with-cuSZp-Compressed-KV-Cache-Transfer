@@ -71,14 +71,34 @@ __global__ void compute_relative_bounds_bf16_kernel(
     const __nv_bfloat16* const input = input_pages[page];
     float local_min = FLT_MAX;
     float local_max = -FLT_MAX;
-    for (size_t index = threadIdx.x; index < num_elements;
-         index += blockDim.x) {
-        const size_t source_index = selected_bf16_source_index(
-            index, layer_indices, selected_layers, source_layers,
-            elements_per_layer);
-        const float value = __bfloat162float(input[source_index]);
-        local_min = fminf(local_min, value);
-        local_max = fmaxf(local_max, value);
+    if (layer_indices == nullptr) {
+        for (size_t index = threadIdx.x; index < num_elements;
+             index += blockDim.x) {
+            const float value = __bfloat162float(input[index]);
+            local_min = fminf(local_min, value);
+            local_max = fmaxf(local_max, value);
+        }
+    } else {
+        const size_t elements_per_prefix =
+            selected_layers * elements_per_layer;
+        const size_t prefix_count = num_elements / elements_per_prefix;
+        for (size_t prefix = 0; prefix < prefix_count; ++prefix) {
+            for (size_t selected = 0; selected < selected_layers;
+                 ++selected) {
+                const size_t source_base =
+                    (prefix * source_layers +
+                     static_cast<size_t>(layer_indices[selected])) *
+                    elements_per_layer;
+                for (size_t inner = threadIdx.x;
+                     inner < elements_per_layer;
+                     inner += blockDim.x) {
+                    const float value =
+                        __bfloat162float(input[source_base + inner]);
+                    local_min = fminf(local_min, value);
+                    local_max = fmaxf(local_max, value);
+                }
+            }
+        }
     }
     for (int delta = 16; delta > 0; delta >>= 1) {
         local_min = fminf(
@@ -160,6 +180,17 @@ __global__ void compress_batch_fixed_bf16_kernel(
     for (int chunk = 0; chunk < chunks_per_block; ++chunk) {
         const int block_start =
             base_start_index + chunk * 1024 + lane * 32;
+        const bool contiguous_source_run =
+            layer_indices == nullptr ||
+            (block_start < num_elements &&
+             static_cast<size_t>(block_start) % elements_per_layer + 32 <=
+                 elements_per_layer);
+        const size_t source_block_start =
+            block_start < num_elements
+                ? selected_bf16_source_index(
+                      static_cast<size_t>(block_start), layer_indices,
+                      selected_layers, source_layers, elements_per_layer)
+                : 0;
         sign_flags[chunk] = 0;
         int max_quantized = 0;
         const int quantized_start = chunk * 32;
@@ -169,9 +200,11 @@ __global__ void compress_batch_fixed_bf16_kernel(
             const int input_index = block_start + value;
             int quantized = 0;
             if (input_index < num_elements) {
-                const size_t source_index = selected_bf16_source_index(
-                    input_index, layer_indices, selected_layers,
-                    source_layers, elements_per_layer);
+                const size_t source_index = contiguous_source_run
+                    ? source_block_start + static_cast<size_t>(value)
+                    : selected_bf16_source_index(
+                          input_index, layer_indices, selected_layers,
+                          source_layers, elements_per_layer);
                 quantized = batch_quantization(
                     __bfloat162float(input[source_index]),
                     reciprocal_precision);
@@ -514,15 +547,21 @@ __global__ void decompress_batch_fixed_bf16_kernel(
                                 elements_per_layer);
                         destination[first_destination] =
                             __float2bfloat16_rn(first_value);
-                    }
-                    if (output_index + 1 < num_elements) {
-                        const size_t second_destination =
-                            selected_bf16_source_index(
-                                output_index + 1, layer_indices,
-                                selected_layers, source_layers,
-                                elements_per_layer);
-                        destination[second_destination] =
-                            __float2bfloat16_rn(second_value);
+                        if (output_index + 1 < num_elements) {
+                            const bool same_layer =
+                                static_cast<size_t>(output_index) %
+                                        elements_per_layer +
+                                    1 <
+                                elements_per_layer;
+                            const size_t second_destination = same_layer
+                                ? first_destination + 1
+                                : selected_bf16_source_index(
+                                      output_index + 1, layer_indices,
+                                      selected_layers, source_layers,
+                                      elements_per_layer);
+                            destination[second_destination] =
+                                __float2bfloat16_rn(second_value);
+                        }
                     }
                 } else if (output_index + 1 < num_elements) {
                     if (destination_pages == nullptr ||

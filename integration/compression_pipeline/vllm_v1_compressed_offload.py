@@ -363,6 +363,7 @@ class CompressedPageStore:
     def __init__(self):
         self._pages: dict[int, CompressedBundle] = {}
         self._lock = threading.Lock()
+        self._gpu_pack_slab: torch.Tensor | None = None
 
     def put(self, cpu_block_id: int, bundle: CompressedBundle) -> None:
         with self._lock:
@@ -377,27 +378,70 @@ class CompressedPageStore:
             for _cpu_block_id, bundle in entries
             for segment in bundle.segments
         ]
-        total_bytes = sum(int(segment.payload.numel()) for segment in segments)
+        payloads = [
+            segment.payload.view(torch.uint8).view(-1)
+            for segment in segments
+        ]
+        alignment = 8
+        layout: list[tuple[EncodedSegment, torch.Tensor, int, int]] = []
+        total_bytes = 0
+        for segment, payload in zip(segments, payloads):
+            start = (total_bytes + alignment - 1) // alignment * alignment
+            end = start + int(payload.numel())
+            layout.append((segment, payload, start, end))
+            total_bytes = end
         try:
             slab = torch.empty(
                 total_bytes, dtype=torch.uint8, pin_memory=True
             )
         except RuntimeError:
             slab = torch.empty(total_bytes, dtype=torch.uint8)
+        all_gpu = bool(payloads) and all(
+            payload.is_cuda and payload.device == payloads[0].device
+            for payload in payloads
+        )
+        if all_gpu:
+            device = payloads[0].device
+            if (
+                self._gpu_pack_slab is None
+                or self._gpu_pack_slab.device != device
+                or self._gpu_pack_slab.numel() < total_bytes
+            ):
+                self._gpu_pack_slab = torch.empty(
+                    total_bytes, dtype=torch.uint8, device=device
+                )
+            packed_gpu = self._gpu_pack_slab[:total_bytes]
+            if len(layout) == 1 and layout[0][2] == 0:
+                packed_gpu.copy_(layout[0][1])
+            else:
+                padding = torch.empty(
+                    alignment, dtype=torch.uint8, device=device
+                )
+                parts = []
+                cursor = 0
+                for _segment, payload, start, end in layout:
+                    if start > cursor:
+                        parts.append(padding[: start - cursor])
+                    parts.append(payload)
+                    cursor = end
+                torch.cat(parts, out=packed_gpu)
+            slab.copy_(packed_gpu, non_blocking=True)
+            torch.cuda.current_stream(device).synchronize()
+            for segment, _payload, start, end in layout:
+                segment.payload = slab[start:end]
+            with self._lock:
+                for cpu_block_id, bundle in entries:
+                    self._pages[cpu_block_id] = bundle
+            return
+
         cuda_devices = set()
-        offset = 0
-        for segment in segments:
-            payload = segment.payload.view(torch.uint8).view(-1)
-            end = offset + payload.numel()
-            slab[offset:end].copy_(payload, non_blocking=payload.is_cuda)
+        for segment, payload, start, end in layout:
+            slab[start:end].copy_(payload, non_blocking=payload.is_cuda)
             if payload.is_cuda:
                 cuda_devices.add(payload.device)
-            segment.payload = slab[offset:end]
-            offset = end
+            segment.payload = slab[start:end]
         for device in cuda_devices:
             torch.cuda.current_stream(device).synchronize()
-        if offset != total_bytes:
-            raise RuntimeError("packed page-store size mismatch")
         with self._lock:
             for cpu_block_id, bundle in entries:
                 self._pages[cpu_block_id] = bundle
@@ -1405,27 +1449,77 @@ class CompressedOffloadingHandler(OffloadingHandler):
             key = (request["bound"], request["selected_layers"])
             request_groups.setdefault(key, []).append(request)
 
-        for requests in request_groups.values():
-            first_request = requests[0]
-            success, sizes, actual_bounds = batch_compress(
-                [request["source"] for request in requests],
-                [request["compressed"] for request in requests],
-                first_request["selected_index"],
+        grouped_requests = list(request_groups.values())
+        batch_results = []
+        grouped_compress = getattr(
+            compressor,
+            "compress_batch_fixed_bf16_indexed_groups",
+            None,
+        )
+        if grouped_compress is not None and len(grouped_requests) > 1:
+            flattened_requests = [
+                request
+                for requests in grouped_requests
+                for request in requests
+            ]
+            success, sizes, actual_bounds = grouped_compress(
+                [request["source"] for request in flattened_requests],
+                [
+                    request["compressed"]
+                    for request in flattened_requests
+                ],
+                [
+                    requests[0]["selected_index"]
+                    for requests in grouped_requests
+                ],
+                [len(requests) for requests in grouped_requests],
                 prefix_count,
                 num_layers,
                 common_elements_per_layer,
-                [request["bound"] for request in requests],
+                [
+                    request["bound"]
+                    for request in flattened_requests
+                ],
             )
             if (
-                not success
-                or len(sizes) != len(requests)
-                or len(actual_bounds) != len(requests)
+                success
+                and len(sizes) == len(flattened_requests)
+                and len(actual_bounds) == len(flattened_requests)
             ):
-                logger.warning(
-                    "indexed adaptive fixed compression failed; "
-                    "using gathered batch path"
+                batch_results.append(
+                    (flattened_requests, sizes, actual_bounds)
                 )
-                return None
+            else:
+                logger.warning(
+                    "grouped indexed compression failed; retrying each "
+                    "adaptive layer group"
+                )
+
+        if not batch_results:
+            for requests in grouped_requests:
+                first_request = requests[0]
+                success, sizes, actual_bounds = batch_compress(
+                    [request["source"] for request in requests],
+                    [request["compressed"] for request in requests],
+                    first_request["selected_index"],
+                    prefix_count,
+                    num_layers,
+                    common_elements_per_layer,
+                    [request["bound"] for request in requests],
+                )
+                if (
+                    not success
+                    or len(sizes) != len(requests)
+                    or len(actual_bounds) != len(requests)
+                ):
+                    logger.warning(
+                        "indexed adaptive fixed compression failed; "
+                        "using gathered batch path"
+                    )
+                    return None
+                batch_results.append((requests, sizes, actual_bounds))
+
+        for requests, sizes, actual_bounds in batch_results:
             for request, size, actual_bound in zip(
                 requests, sizes, actual_bounds
             ):
@@ -1724,13 +1818,37 @@ class CompressedOffloadingHandler(OffloadingHandler):
     ) -> RestoreStageTimings:
         timings = RestoreStageTimings()
         grouped: dict[
-            str, list[tuple[int, EncodedSegment, torch.Tensor]]
+            tuple[object, ...],
+            list[tuple[int, EncodedSegment, torch.Tensor]],
         ] = {}
         for item in prefetched:
-            mode = item[1].cuszp_mode or self.cuszp_mode
-            grouped.setdefault(mode, []).append(item)
+            segment = item[1]
+            mode = segment.cuszp_mode or self.cuszp_mode
+            if mode == "fixed":
+                component_layout = tuple(
+                    (
+                        component.tensor_idx,
+                        component.original_shape,
+                        component.original_dtype,
+                        component.numel,
+                        component.layer_axis,
+                        component.layer_indices,
+                        component.destination_view_shape,
+                    )
+                    for component in segment.components
+                )
+                batch_key = (
+                    mode,
+                    segment.compressed_numel,
+                    segment.unpadded_numel,
+                    component_layout,
+                )
+            else:
+                batch_key = (mode,)
+            grouped.setdefault(batch_key, []).append(item)
 
-        for mode, items in grouped.items():
+        for batch_key, items in grouped.items():
+            mode = str(batch_key[0])
             if mode not in self.compressors:
                 raise ValueError(f"unknown cuSZp mode in segment: {mode}")
             compressor = self.compressors[mode]

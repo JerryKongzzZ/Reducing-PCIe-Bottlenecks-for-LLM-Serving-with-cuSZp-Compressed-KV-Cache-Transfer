@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "purpose": "Multi-domain teacher-forced KV-cache sensitivity calibration",
+  "prompts": [
+    {"id": "network_scheduling", "text": "Network packet scheduling reduces congestion while preserving service fairness. ", "repeat": 32},
+    {"id": "astronomy", "text": "Astronomers measure distant galaxies using calibrated spectral sensors and uncertainty estimates. ", "repeat": 32},
+    {"id": "marine_ecosystems", "text": "Marine ecosystems depend on stable temperature, nutrient cycles, and diverse food webs. ", "repeat": 32},
+    {"id": "compiler_optimization", "text": "Compiler optimization transforms programs while preserving observable semantics and memory safety. ", "repeat": 32},
+    {"id": "urban_rail", "text": "Urban rail planning balances passenger demand, station capacity, energy use, and transfer time. ", "repeat": 32},
+    {"id": "medical_imaging", "text": "Medical imaging reconstructs internal structures from noisy measurements under strict validation. ", "repeat": 32},
+    {"id": "chinese_systems", "text": "长上下文大模型推理需要在传输延迟、显存容量和输出质量之间取得平衡。", "repeat": 32},
+    {"id": "structured_reasoning", "text": "Given latency equals transfer bytes divided by bandwidth, compare two designs and verify every unit. ", "repeat": 32}
+  ]
+}

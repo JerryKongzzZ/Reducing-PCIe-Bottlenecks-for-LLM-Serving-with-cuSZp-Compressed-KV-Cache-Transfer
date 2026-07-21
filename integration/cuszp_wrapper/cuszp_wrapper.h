@@ -60,6 +60,19 @@ public:
         std::vector<float>& actual_error_bounds,
         cudaStream_t stream = nullptr
     );
+    bool compress_batch_fixed_bf16_indexed_groups(
+        const std::vector<torch::Tensor>& input_tensors,
+        const std::vector<torch::Tensor>& compressed_buffers,
+        const std::vector<torch::Tensor>& layer_indices,
+        const std::vector<size_t>& group_sizes,
+        size_t prefix_count,
+        size_t source_layers,
+        size_t elements_per_layer,
+        const std::vector<float>& eps_overrides,
+        std::vector<size_t>& compressed_sizes,
+        std::vector<float>& actual_error_bounds,
+        cudaStream_t stream = nullptr
+    );
     bool decompress(
         torch::Tensor compressed_buffer,
         size_t compressed_size,

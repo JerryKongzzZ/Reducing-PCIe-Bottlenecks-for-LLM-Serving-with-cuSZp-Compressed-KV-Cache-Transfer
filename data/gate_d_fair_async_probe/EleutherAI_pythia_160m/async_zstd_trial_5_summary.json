@@ -1,0 +1,316 @@
+{
+  "metrics_path": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/gate_d_fair_async_probe/EleutherAI_pythia_160m/async_zstd_trial_5.jsonl",
+  "num_events": 15,
+  "num_successful": 15,
+  "directions": [
+    "cpu_to_gpu",
+    "gpu_to_cpu"
+  ],
+  "codec": "zstd",
+  "cuszp_mode": "fixed",
+  "adaptive_cuszp_modes": [
+    "fixed"
+  ],
+  "restore_mode_profile": null,
+  "stock_offload": false,
+  "error_bound": 0.0001,
+  "adaptive_error_bound": false,
+  "cost_aware_restore": false,
+  "async_store": true,
+  "profile_restore_stages": false,
+  "batch_restore_transfers": true,
+  "pcie_contender_mib": 0,
+  "pcie_contender_idle_us": 0.0,
+  "pcie_contender": {
+    "size_bytes": 0,
+    "idle_us": 0.0,
+    "bytes_copied": 0,
+    "elapsed_seconds": 0.0,
+    "throughput_gbps": 0.0
+  },
+  "prompt_repeats": [
+    127,
+    127,
+    127,
+    127,
+    127,
+    127,
+    127,
+    127
+  ],
+  "prompt_style": "disjoint",
+  "batch_prompts": true,
+  "prompt_batch_sizes": null,
+  "warmup_offload": true,
+  "num_replays": 8,
+  "mean_token_match_rate": 0.59375,
+  "exact_match_rate": 0.5,
+  "initial_request_timings": [
+    {
+      "ttft_ms": 116.01805686950684,
+      "e2e_ms": 116.01805686950684,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 113.84463310241699,
+      "e2e_ms": 332.90597310406156,
+      "tpot_ms": 31.29447714309208,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 286.2668037414551,
+      "e2e_ms": 415.5812857497949,
+      "tpot_ms": 18.473497429762833,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 413.79547119140625,
+      "e2e_ms": 580.0473971758038,
+      "tpot_ms": 23.75027514062822,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 538.8984680175781,
+      "e2e_ms": 677.7471129898913,
+      "tpot_ms": 19.835520710330456,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 676.1300563812256,
+      "e2e_ms": 866.3838573847897,
+      "tpot_ms": 190.25380100356415,
+      "generation_tokens": 2
+    },
+    {
+      "ttft_ms": 996.7169761657715,
+      "e2e_ms": 1021.8004091584589,
+      "tpot_ms": 3.5833475703839213,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 999.3429183959961,
+      "e2e_ms": 999.3429183959961,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    }
+  ],
+  "replay_request_timings": [
+    {
+      "ttft_ms": 14.735937118530273,
+      "e2e_ms": 171.23325614375062,
+      "tpot_ms": 22.356759860745765,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 17.443418502807617,
+      "e2e_ms": 17.443418502807617,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    },
+    {
+      "ttft_ms": 99.28512573242188,
+      "e2e_ms": 104.20635272748768,
+      "tpot_ms": 4.921226995065808,
+      "generation_tokens": 2
+    },
+    {
+      "ttft_ms": 236.01913452148438,
+      "e2e_ms": 265.2000615198631,
+      "tpot_ms": 4.168703856911244,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 238.40808868408203,
+      "e2e_ms": 325.12496068375185,
+      "tpot_ms": 12.388124571381402,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 399.0762233734131,
+      "e2e_ms": 402.8508643677924,
+      "tpot_ms": 3.774640994379297,
+      "generation_tokens": 2
+    },
+    {
+      "ttft_ms": 401.41773223876953,
+      "e2e_ms": 491.3641002494842,
+      "tpot_ms": 12.849481144387807,
+      "generation_tokens": 8
+    },
+    {
+      "ttft_ms": 481.5497398376465,
+      "e2e_ms": 481.5497398376465,
+      "tpot_ms": 0.0,
+      "generation_tokens": 1
+    }
+  ],
+  "mean_initial_e2e_ms": 626.2283763535379,
+  "mean_replay_e2e_ms": 282.371594254073,
+  "mean_replay_ttft_ms": 235.9919250011444,
+  "mean_replay_tpot_ms": 7.557367177858915,
+  "agreement": [
+    {
+      "reference_token_ids": [
+        0
+      ],
+      "replay_token_ids": [
+        187,
+        9,
+        19,
+        10,
+        187,
+        510,
+        1246,
+        3688
+      ],
+      "token_match_rate": 0.0,
+      "exact_match": false,
+      "reference_text": "",
+      "replay_text": "\n(2)\nThe present invention"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        510,
+        897,
+        273,
+        247,
+        18543,
+        14,
+        3169
+      ],
+      "replay_token_ids": [
+        0
+      ],
+      "token_match_rate": 0.0,
+      "exact_match": false,
+      "reference_text": "\nThe use of a calibration-based",
+      "replay_text": ""
+    },
+    {
+      "reference_token_ids": [
+        187,
+        3,
+        510,
+        308,
+        3,
+        187,
+        187,
+        510
+      ],
+      "replay_token_ids": [
+        187,
+        0
+      ],
+      "token_match_rate": 0.125,
+      "exact_match": false,
+      "reference_text": "\n\"The T\"\n\nThe",
+      "replay_text": "\n"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        5065,
+        6731,
+        13757,
+        29698,
+        5659,
+        1223,
+        24279
+      ],
+      "replay_token_ids": [
+        187,
+        5065,
+        6731,
+        13757,
+        29698,
+        5659,
+        1223,
+        24279
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\nCompiler optimization transforms programs while preserving",
+      "replay_text": "\nCompiler optimization transforms programs while preserving"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        510,
+        806,
+        14,
+        249,
+        14,
+        783,
+        14
+      ],
+      "replay_token_ids": [
+        187,
+        510,
+        806,
+        14,
+        249,
+        14,
+        783,
+        14
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\nThe first-in-the-",
+      "replay_text": "\nThe first-in-the-"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        0
+      ],
+      "replay_token_ids": [
+        187,
+        0
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "\n",
+      "replay_text": "\n"
+    },
+    {
+      "reference_token_ids": [
+        187,
+        9,
+        19,
+        10,
+        187,
+        510,
+        1246,
+        3688
+      ],
+      "replay_token_ids": [
+        187,
+        9,
+        19,
+        10,
+        187,
+        34,
+        2990,
+        13
+      ],
+      "token_match_rate": 0.625,
+      "exact_match": false,
+      "reference_text": "\n(2)\nThe present invention",
+      "replay_text": "\n(2)\nA network,"
+    },
+    {
+      "reference_token_ids": [
+        0
+      ],
+      "replay_token_ids": [
+        0
+      ],
+      "token_match_rate": 1.0,
+      "exact_match": true,
+      "reference_text": "",
+      "replay_text": ""
+    }
+  ]
+}

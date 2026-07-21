@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "task": "needle_retrieval",
+  "model_tokenizer": "Qwen/Qwen2.5-1.5B",
+  "count": 8,
+  "repeat": 182,
+  "max_model_len": 4096,
+  "max_tokens": 16,
+  "prompt_token_counts": [
+    3885,
+    3885,
+    3885,
+    3885,
+    4067,
+    3886,
+    4068,
+    3885
+  ],
+  "expected_answers": [
+    "ZETA-7314",
+    "NOVA-4826",
+    "ORBIT-9053",
+    "EMBER-2671",
+    "LYRIC-6482",
+    "QUARTZ-1937",
+    "RAVEN-5148",
+    "SOLAR-8265"
+  ],
+  "prompt_file": "/home/jerry/PolyU_COMP_Final_Year_Project_2026_Spring/data/infocom_long_context_quality_v1/prompts.json"
+}

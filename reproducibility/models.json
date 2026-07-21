@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "cache_root": "~/.cache/huggingface/hub",
+  "models": [
+    {
+      "id": "gpt2",
+      "cache_dir": "models--gpt2",
+      "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e"
+    },
+    {
+      "id": "facebook/opt-125m",
+      "cache_dir": "models--facebook--opt-125m",
+      "revision": "27dcfa74d334bc871f3234de431e71c6eeba5dd6"
+    },
+    {
+      "id": "facebook/opt-350m",
+      "cache_dir": "models--facebook--opt-350m",
+      "revision": "08ab08cc4b72ff5593870b5d527cf4230323703c"
+    },
+    {
+      "id": "EleutherAI/pythia-160m",
+      "cache_dir": "models--EleutherAI--pythia-160m",
+      "revision": "50f5173d932e8e61f858120bcb800b97af589f46"
+    },
+    {
+      "id": "EleutherAI/pythia-410m",
+      "cache_dir": "models--EleutherAI--pythia-410m",
+      "revision": "9879c9b5f8bea9051dcb0e68dff21493d67e9d4f"
+    },
+    {
+      "id": "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T",
+      "cache_dir": "models--TinyLlama--TinyLlama-1.1B-intermediate-step-1431k-3T",
+      "revision": "59f6f375b26bde864a6ca194a9a3044570490064"
+    },
+    {
+      "id": "Qwen/Qwen2.5-0.5B",
+      "cache_dir": "models--Qwen--Qwen2.5-0.5B",
+      "revision": "060db6499f32faf8b98477b0a26969ef7d8b9987"
+    },
+    {
+      "id": "Qwen/Qwen2.5-1.5B",
+      "cache_dir": "models--Qwen--Qwen2.5-1.5B",
+      "revision": "8faed761d45a263340a0528343f099c05c9a4323"
+    }
+  ]
+}
