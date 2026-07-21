@@ -141,3 +141,13 @@ def test_paper_describes_the_implemented_connector_and_evidence_boundary():
     assert "synchronization-free path" in source
     assert "continuous synthetic" not in source
     assert "cost-aware option disabled" in source
+    assert (
+        "binds every custom operation to the current PyTorch CUDA stream"
+        not in source
+    )
+    assert "removes allocation, synchronization" not in source
+    assert "generates eight tokens" not in source
+    assert "caps generation at 16 tokens" in source
+    assert "vector PDF" not in source
+    assert "three 300-dpi PNG figures" in source
+    assert r"\anonymoustrue" in source

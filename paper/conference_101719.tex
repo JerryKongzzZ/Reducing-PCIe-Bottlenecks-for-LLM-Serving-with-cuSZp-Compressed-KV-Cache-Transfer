@@ -15,17 +15,19 @@
 
 \graphicspath{{./}}
 \newcommand{\system}{cuSZp-KV}
-% Inlined from canonical experiment JSON for standalone Overleaf compilation.
+% BEGIN GENERATED: results_macros
+% Generated from canonical experiment JSON; do not edit this block.
 \newcommand{\ConcurrencyHandlerReductionPct}{25.5\%}
 \newcommand{\ConcurrencyThroughputGainPct}{20.6\%}
 \newcommand{\ArrivalAchievedGainPct}{17.7\%}
 \newcommand{\ArrivalTTFTPReductionPct}{38.4\%}
 \newcommand{\SmallHandlerReductionPct}{25.5\%}
+% END GENERATED: results_macros
 
 % INFOCOM 2027 uses double-blind review. Keep this true for submission and
 % change it to \anonymousfalse only for the accepted camera-ready manuscript.
 \newif\ifanonymous
-\anonymousfalse
+\anonymoustrue
 
 \begin{document}
 
@@ -60,7 +62,7 @@ zhaorui.zhang@polyu.edu.hk}
 \maketitle
 
 \begin{abstract}
-Long-context large language model serving may move key--value caches between graphics processing unit memory and host memory, making Peripheral Component Interconnect Express transfer a critical latency component. Compression helps only when the saved transfer time exceeds encoding, metadata, synchronization, and decoding overhead. We present \system{}, a vLLM-compatible cache-transfer path that combines device-side error-bounded compression, stream-ordered execution, persistent workspaces, packed pinned-memory transfers, and batched bfloat16 restoration. On an RTX 5080, five interleaved trials with Qwen2.5-1.5B show that, at concurrency eight, \system{} reduces combined offload-and-restore handler time by \ConcurrencyHandlerReductionPct{} and increases initial request throughput by \ConcurrencyThroughputGainPct{} relative to a matched raw path. At an overloaded arrival rate of six requests per second, it increases achieved throughput by \ArrivalAchievedGainPct{} and reduces the 95th-percentile time to first token by \ArrivalTTFTPReductionPct{}, although neither path sustains the offered load. A second Qwen2.5-0.5B workload matches raw output under predefined quality gates and reduces handler time by \SmallHandlerReductionPct{}. Across eight models, cuSZp has lower handler time than matched 8-bit quantization, Zstandard, and LZ4 paths, while gains over raw transfer remain workload dependent. A two-trial mixed-bound pilot preserves quality but remains slower than the optimized fixed-bound path, identifying adaptation overhead as future work.
+Long-context large language model serving may move key--value caches between graphics processing unit memory and host memory, making Peripheral Component Interconnect Express transfer a critical latency component. Compression helps only when the saved transfer time exceeds encoding, metadata, synchronization, and decoding overhead. We present \system{}, a vLLM-compatible cache-transfer path that combines device-side error-bounded compression, event-ordered background offload, reusable device workspaces, packed pinned-memory transfers, and batched bfloat16 restoration. On an RTX 5080, five interleaved trials with Qwen2.5-1.5B show that, at concurrency eight, \system{} reduces combined offload-and-restore handler time by \ConcurrencyHandlerReductionPct{} and increases initial request throughput by \ConcurrencyThroughputGainPct{} relative to a matched raw path. At an overloaded arrival rate of six requests per second, it increases achieved throughput by \ArrivalAchievedGainPct{} and reduces the 95th-percentile time to first token by \ArrivalTTFTPReductionPct{}, although neither path sustains the offered load. A second Qwen2.5-0.5B workload matches raw output under predefined quality gates and reduces handler time by \SmallHandlerReductionPct{}. Across eight models, cuSZp has lower handler time than matched 8-bit quantization, Zstandard, and LZ4 paths, while gains over raw transfer remain workload dependent. A two-trial mixed-bound pilot preserves quality but remains slower than the optimized fixed-bound path, identifying adaptation overhead as future work.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -93,9 +95,10 @@ slower than an optimized raw copy.  This was the central engineering obstacle
 in our project.
 
 We present \system{}, a GPU-native, error-bounded KV-cache transfer path for
-vLLM.  The system intercepts the cache engine without changing the model or
-scheduler, binds every custom operation to the current PyTorch CUDA stream,
-packs variable-length outputs into persistent slabs, and decodes a restore batch
+vLLM.  The system is loaded through vLLM V1's native offloading connector
+without changing the installed vLLM package, model, or scheduler.  It orders
+background offload after a producer-stream event, packs variable-length outputs
+into reusable device slabs and pinned host storage, and decodes a restore batch
 directly into BF16 KV pages.  The production configuration uses fixed cuSZp with
 a conservative relative bound of $10^{-5}$.  A model-calibrated adaptive
 controller is implemented, but is deliberately reported as an ablation because
@@ -116,7 +119,7 @@ This paper makes four contributions:
   raw and compressed modes share pinned storage, batching, destination pages,
   scheduling class, and timing boundaries.
   \item We remove practical break-even blockers through persistent GPU
-  workspaces, packed D2H/H2D slabs, current-stream execution, and a batched
+  workspaces, packed D2H/H2D slabs, event-ordered background offload, and a batched
   fixed-cuSZp decoder that writes BF16 values directly to final KV pages.
   \item We introduce a reproducible evaluation protocol combining real
   simultaneous bursts, fixed-rate open-loop arrivals, pooled P95/P99 and SLO
@@ -211,7 +214,7 @@ measured operating point is below break-even.
 \node[wide] (cache) {vLLM V1\\KV pages};
 \node[wide,right=of cache] (patch) {vLLM offload\\connector};
 \node[wide,right=of patch] (policy) {raw or fixed\\cuSZp $10^{-5}$};
-\node[wide,right=of policy] (compress) {ordered CUDA\\batched encode};
+\node[wide,right=of policy] (compress) {event-ordered\\batched encode};
 \node[wide,right=of compress] (d2h) {packed slab\\one D2H copy};
 \node[wide,right=of d2h] (host) {pinned host store\\payload + metadata};
 
@@ -246,28 +249,36 @@ kernels and compressed metadata.}
 
 \subsection{Transparent Cache-Engine Interposition}
 
-A Python monkey patch wraps vLLM V1 cache store and restore operations.  The
-model, PagedAttention kernels, scheduler, and block identifiers remain
+vLLM V1's native \texttt{OffloadingConnector} loads our
+\texttt{CompressedCPUOffloadingSpec} through \texttt{spec\_module\_path}; no
+Python monkey-patching or modification of the installed vLLM package is used.
+The model, PagedAttention kernels, scheduler, and block identifiers remain
 unchanged.  The connector maps each host-resident entry to its codec, original
 shape, compressed length, destination page, and actual absolute error bound.
-Unsupported layouts or failed compression attempts fall back to the same raw
-transfer implementation used by the baseline.
+Unsupported fixed-fast-path layouts fall back to the generic bundle path; an
+encoded payload that would expand falls back to the same raw representation
+used by the matched baseline.
 
-The C++/PyBind11 extension receives the active PyTorch CUDA stream explicitly.
-Compression kernels, metadata copies, D2H/H2D copies, and decompression kernels
-therefore obey vLLM's existing stream order without a redundant Python-side
-device synchronization.  This is essential for both correctness and overlap:
-running a fast kernel on the wrong stream either races with a copy or forces a
-global barrier.
+The C++/PyBind11 extension obtains the current PyTorch CUDA stream in the thread
+that invokes each native operation.  For GPU-to-CPU offload, the connector first
+records an event on vLLM's producer stream; a single background worker waits for
+that event and then runs cuSZp on its own default CUDA stream.  This explicit
+handoff is required because the tested cuSZp path is not reliable on a
+non-default worker stream.  Publication synchronizes the producing stream before
+making pinned-host slices visible.  Restore enqueues H2D copies and decoding on
+the restore thread's current stream.  This is not a synchronization-free path:
+it uses scoped event and stream synchronization, while the normal unprofiled
+path avoids an unconditional device-wide barrier.
 
 \subsection{Packed Publication and Restore}
 
 Variable compressed sizes make per-page host allocation and copying expensive.
-The GPU-to-CPU path retains completed page payloads in grow-only device
-workspaces, computes their offsets, concatenates them into one device slab, and
-publishes the batch directly into its final pinned-host slices with one
-synchronization.  The host dictionary stores offsets and reconstruction
-metadata; it does not copy the payload through pageable Python buffers.
+The GPU-to-CPU path reuses grow-only compression and packing workspaces where the
+fixed fast path applies, computes payload offsets, concatenates the outputs into
+one device slab, allocates a pinned host slab for the publication, and exposes
+its slices after one scoped stream synchronization.  The host dictionary stores
+those slices and reconstruction metadata; it does not copy the payload through
+pageable Python buffers.
 
 On restore, compatible pages are packed into one pinned-host slab and transferred
 with one H2D copy.  The fixed-mode CUDA decoder consumes the packed metadata and
@@ -288,13 +299,15 @@ with a CUDA reduction and stores the resulting scalar beside the bitstream.
 The main system uses $\epsilon_{\mathrm{rel}}=10^{-5}$ because the registered
 multi-prompt quality suite rejects uniform looser bounds.
 
-We also implement a cost-aware extension that selects raw versus cuSZp, a
-model-specific per-layer safety cap, and cuSZp's existing plain, fixed, or
-outlier mode.  Offline multi-prompt sweeps conservatively merge per-layer
-quality constraints.  Runtime selection uses measured ratio and decoder
-throughput, falling back to raw if predicted savings are below a threshold.
-Section~\ref{sec:adaptive} reports this mechanism separately: its current
-mixed-bound implementation is quality-safe but slower than the fixed path.
+The implementation also contains an optional cost-aware restore model that can
+select raw fallback versus cuSZp using measured ratio and decoder throughput,
+plus a pressure controller, model-specific per-layer safety caps, and cuSZp's
+existing plain, fixed, or outlier mode.  Offline multi-prompt sweeps
+conservatively merge per-layer quality constraints.  The formal adaptive pilot
+uses fixed cuSZp mode and has the cost-aware option disabled; it therefore tests
+the calibrated mixed-bound pressure mechanism rather than cost-model-based raw
+selection.  Section~\ref{sec:adaptive} reports this quality-safe mechanism
+separately because it is slower than the uniform fixed path.
 \section{Evaluation Methodology}
 \label{sec:methodology}
 
@@ -368,7 +381,8 @@ adaptive bound selection outperform the fixed path?
 
 \subsection{RQ1: Raw Break-Even under Request Pressure}
 
-% Inlined from canonical experiment JSON for standalone Overleaf compilation.
+% BEGIN GENERATED: table_concurrency
+% Generated from canonical experiment JSON; do not edit this block.
 \begin{table*}[t]
 \centering
 \caption{Qwen2.5-1.5B simultaneous-burst results (five interleaved trials). Differences are cuSZp minus raw; negative latency is better.}
@@ -386,6 +400,7 @@ Conc. & Raw handler & cuSZp handler & Paired handler $\Delta$ & Initial req/s (r
 \bottomrule
 \end{tabular}
 \end{table*}
+% END GENERATED: table_concurrency
 
 Table~\ref{tab:concurrency} shows the simultaneous-burst sweep.  At every
 concurrency, the paired combined-handler interval favors fixed cuSZp and the
@@ -413,7 +428,8 @@ from 4183.787 to 3501.063~ms.  At registered thresholds of 2000~ms TTFT and
   \label{fig:openloop}
 \end{figure*}
 
-% Inlined from canonical experiment JSON for standalone Overleaf compilation.
+% BEGIN GENERATED: table_open_loop
+% Generated from canonical experiment JSON; do not edit this block.
 \begin{table*}[t]
 \centering
 \caption{Fixed-rate open-loop results. P95 values pool all requests across five trials; the final column is a paired trial-level confidence interval.}
@@ -431,6 +447,7 @@ Qwen2.5-1.5B & 6 & 3.751 $\rightarrow$ 4.415 & 1631.3 $\rightarrow$ 1005.4 ms & 
 \bottomrule
 \end{tabular}
 \end{table*}
+% END GENERATED: table_open_loop
 
 \begin{figure*}[t]
   \centering
@@ -460,7 +477,8 @@ Qwen2.5-1.5B.
 
 \subsection{RQ2: Cross-Model and Codec Behavior}
 
-% Inlined from canonical experiment JSON for standalone Overleaf compilation.
+% BEGIN GENERATED: table_gate_d
+% Generated from canonical experiment JSON; do not edit this block.
 \begin{table*}[t]
 \centering
 \caption{Gate D cross-model fixed-bound comparison (five interleaved trials). Handler is G2C+C2G.}
@@ -482,6 +500,7 @@ Qwen2.5-1.5B & 1.614$\times$ & 71.826 ms & 44.074 ms & $ -27.752\pm4.225$ ms & P
 \bottomrule
 \end{tabular}
 \end{table*}
+% END GENERATED: table_gate_d
 
 \begin{figure}[t]
   \centering
@@ -515,7 +534,8 @@ either result.
 
 \subsection{RQ3: Quality and Common Baselines}
 
-% Inlined from canonical experiment JSON for standalone Overleaf compilation.
+% BEGIN GENERATED: table_quality
+% Generated from canonical experiment JSON; do not edit this block.
 \begin{table}[t]
 \centering
 \caption{Qwen2.5-1.5B long-context needle-retrieval suite (five trials).}
@@ -534,6 +554,7 @@ INT8 & 2.000$\times$ & 188.2 ms & 1436.5 ms & 12.5\% & Reject \\
 \bottomrule
 \end{tabular}
 \end{table}
+% END GENERATED: table_quality
 
 Table~\ref{tab:quality} reports the registered long-context task suite.
 Raw, fixed cuSZp, Zstd, and LZ4 retain 100\% needle-retrieval accuracy and pass
@@ -548,7 +569,8 @@ suite, for raw break-even claims.
 \subsection{RQ4: Adaptive Extension}
 \label{sec:adaptive}
 
-% Inlined from canonical experiment JSON for standalone Overleaf compilation.
+% BEGIN GENERATED: table_adaptive
+% Generated from canonical experiment JSON; do not edit this block.
 \begin{table}[t]
 \centering
 \caption{Adaptive mechanism ablation (two-trial pilot; not a formal performance claim).}
@@ -565,25 +587,28 @@ Adaptive mixed & 1.706$\times$ & 41.246 ms & 1.710 ms & 0.875/0.875 \\
 \bottomrule
 \end{tabular}
 \end{table}
+% END GENERATED: table_adaptive
 
 The adaptive pilot selects a quality-safe mixture of 21 layers at $10^{-4}$
 and seven layers at $10^{-5}$, increasing the ratio from 1.614 to 1.706.
 It beats raw on G2C in both pilot trials, but is 2.479~ms slower than uniform
-fixed cuSZp on G2C and 0.707~ms slower on C2G.  Under a continuous synthetic
-H2D contender it also remains slower than fixed.  Consequently, adaptive
-selection is a working mechanism and a useful overhead ablation, but it is not
-part of the paper's primary performance configuration.
+fixed cuSZp on G2C and 0.707~ms slower on C2G.  No synthetic PCIe contender is
+enabled in this registered pilot, and the cost-aware option is disabled.
+Consequently, adaptive selection is a working mechanism and a useful overhead
+ablation, but it is not part of the paper's primary performance configuration.
 \section{Discussion}
 \label{sec:discussion}
 
 \subsection{Why the Optimized Path Crosses Break-Even}
 
 The final design succeeds for reasons that are not visible in compression ratio
-alone.  Persistent workspaces remove allocation from the per-event critical
-path.  Packing converts many small copies and synchronizations into one slab
-transfer.  Current-stream execution preserves dependency order without a
-device-wide barrier.  Direct BF16 decode eliminates both an FP32 intermediate
-and a scatter kernel.  Finally, the matched raw path shows which gains survive
+alone.  Reusable device workspaces amortize temporary allocation on the fixed
+fast path.  Packing converts many small payload copies into a slab transfer.
+An event-ordered worker handoff and scoped stream synchronization preserve
+dependency order without an unconditional device-wide barrier in the normal
+unprofiled path.  Direct BF16 decode eliminates both an FP32 intermediate and a
+scatter kernel for compatible fixed-mode batches.  Finally, the matched raw path
+shows which gains survive
 against a strong systems baseline.  These choices reduce the left side of
 Eq.~\eqref{eq:breakeven}; the codec's payload ratio reduces the right-side
 transfer term.
@@ -619,7 +644,7 @@ measured system behavior, not a hardware-independent speedup.
 \textbf{Model and task scope.}
 Gate D covers eight models, but the strongest distinct-prompt open-loop results
 use two Qwen2.5 sizes.  The quality task contains eight controlled
-needle-retrieval prompts and generates eight tokens.  It does not replace
+needle-retrieval prompts and caps generation at 16 tokens.  It does not replace
 LongBench-style reasoning, summarization, code, or long-output evaluation.
 Error-bound profiles are model specific and must not be reused without
 calibration.
@@ -658,9 +683,10 @@ regenerates every file under \texttt{paper/generated/}; running
 \begin{quote}
 \footnotesize\path{venv/bin/python benchmarks/generate_infocom_figures.py}
 \end{quote}
-regenerates vector PDF, 300-dpi PNG, CSV, and LaTeX figure data from the same
-canonical JSON.  The experiment runners record the V1-runner environment,
-prompt repetitions, cache budget, trial order, arrival interval, SLO
+regenerates the three 300-dpi PNG figures and their available CSV and LaTeX
+tabular exports from the same canonical JSON.  The experiment runners record
+the V1-runner environment, prompt repetitions, cache budget, trial order,
+arrival interval, SLO
 thresholds, and quality rules.  The artifact now freezes package and tool
 versions, the exact cuSZp commit, GPU and driver information, eight model
 snapshot revisions, and the native-extension build command under
@@ -674,8 +700,9 @@ all formal orchestration commands without launching inference.
 
 Compression is not automatically faster than raw PCIe transfer.  \system{}
 crosses the break-even point by combining a conservative cuSZp representation
-with systems work that removes allocation, synchronization, copy fragmentation,
-intermediate precision conversion, and scatter overhead.  Five-trial vLLM
+with systems work that reuses device workspaces, packs variable-length payloads,
+uses scoped event and stream synchronization, and avoids intermediate FP32
+conversion and scatter on compatible fixed-mode restoration.  Five-trial vLLM
 experiments show quality-safe handler, throughput, and tail-latency improvements
 on two Qwen2.5 models under the stated concurrent and open-loop loads.  The
 eight-model study further shows that cuSZp is the strongest tested compressed
